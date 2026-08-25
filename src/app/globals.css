@@ -1,0 +1,276 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  /* Palette taken from the HN Properties mark: a deep navy for structure,
+     the logo's blue for action, and a warm amber used sparingly for emphasis. */
+  --navy: #0e2f5a;
+  --navy-deep: #092343;
+  --brand: #1583b5;
+  --brand-dark: #106a94;
+  --brand-soft: #e8f4fa;
+  --accent: #f5a524;
+  --accent-soft: #fef6e7;
+  --ok: #16a34a;
+  --ok-soft: #e8f6ed;
+  --danger: #c1121f;
+
+  --ink: #10233c;
+  --ink-soft: #405469;
+  --muted: #6b7f95;
+  --paper: #f4f7fa;
+  --plate: #ffffff;
+  --rule: #e2e8f0;
+
+  --shadow-card: 0 1px 2px rgba(16, 35, 60, 0.04), 0 8px 24px -12px rgba(16, 35, 60, 0.18);
+  --shadow-lift: 0 2px 4px rgba(16, 35, 60, 0.06), 0 20px 40px -18px rgba(16, 35, 60, 0.32);
+
+
+  /* iOS-style spring easing. Slight overshoot on entry, gentle settle. */
+  --ease-spring: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+* { border-color: var(--rule); }
+
+/*
+ * Tailwind sizes everything in rem, so moving the root size scales type, padding
+ * and gaps together. Larger screens get larger text rather than the same text
+ * stranded in the middle of the display.
+ */
+/*
+ * The single dial for the whole interface. Everything — type, padding, gaps, the
+ * sidebar, card sizes — is expressed in rem, so changing these four numbers scales
+ * the site and the CRM together. Nudge them up or down if the balance feels off on
+ * a different screen.
+ */
+html { font-size: 13px; }
+@media (min-width: 1440px) { html { font-size: 13.5px; } }
+@media (min-width: 1800px) { html { font-size: 14.5px; } }
+@media (min-width: 2400px) { html { font-size: 15.5px; } }
+
+/* Nothing should ever push the page sideways. */
+html, body { overflow-x: clip; max-width: 100%; }
+
+body {
+  background: var(--paper);
+  color: var(--ink);
+  font-size: 1rem;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+
+@layer components {
+  .wrap { @apply mx-auto w-full max-w-[1600px] px-5 sm:px-8 2xl:max-w-[2100px] 2xl:px-12; }
+
+  .plate {
+    background: var(--plate);
+    border: 1px solid var(--rule);
+    border-radius: 14px;
+    box-shadow: var(--shadow-card);
+  }
+
+  /* Panels that sit on white. Same treatment as .plate, slightly rounder. */
+  .glass-card {
+    background: var(--plate);
+    border: 1px solid var(--rule);
+    border-radius: 16px;
+    box-shadow: var(--shadow-card);
+  }
+
+  /* Panel that sits over the hero photograph — solid enough to stay readable. */
+  .glass-dark {
+    background: rgba(9, 35, 67, 0.88);
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    border-radius: 16px;
+  }
+
+  .eyebrow {
+    @apply text-xs font-semibold uppercase tracking-[0.12em];
+    color: var(--muted);
+  }
+
+  .display { font-family: var(--font-display), system-ui, sans-serif; @apply font-bold tracking-[-0.02em]; }
+
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-lg px-5 py-3 text-base font-semibold transition;
+    @apply focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2;
+    outline-color: var(--brand);
+  }
+  .btn { transition: transform 0.25s var(--ease-spring), background-color 0.2s ease, box-shadow 0.25s ease, border-color 0.2s ease; }
+  .btn:hover { transform: translateY(-1px); }
+  .btn:active { transform: translateY(0) scale(0.98); }
+  .btn-primary { background: var(--brand); color: #fff; box-shadow: 0 4px 14px -4px rgba(21, 131, 181, 0.55); }
+  .btn-primary:hover { background: var(--brand-dark); box-shadow: 0 8px 22px -6px rgba(21, 131, 181, 0.6); }
+  .btn-navy { background: var(--navy); color: #fff; }
+  .btn-navy:hover { background: var(--navy-deep); }
+  .btn-ghost { border: 1px solid var(--rule); background: var(--plate); color: var(--ink); }
+  .btn-ghost:hover { border-color: var(--brand); color: var(--brand); }
+  .btn-brass, .btn-accent { background: var(--accent); color: #40290a; }
+  .btn-brass:hover, .btn-accent:hover { background: #e0951c; }
+  .btn:disabled { @apply cursor-not-allowed opacity-50; }
+
+  .field {
+    @apply w-full rounded-lg border bg-white px-4 py-3 text-base;
+    border-color: var(--rule);
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  }
+  .field:focus { @apply outline-none ring-2; border-color: var(--brand); --tw-ring-color: var(--brand-soft); }
+  .label { @apply mb-1.5 block text-sm font-semibold; color: var(--ink-soft); }
+
+  .badge {
+    @apply inline-flex items-center gap-1 rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.06em];
+    background: var(--paper);
+    color: var(--ink-soft);
+  }
+  .badge-verified { background: var(--ok-soft); color: var(--ok); }
+  .badge-soon { background: var(--accent-soft); color: #a5690a; }
+  .badge-sale { background: var(--brand-soft); color: var(--brand-dark); }
+
+  .mono { font-family: var(--font-mono), ui-monospace, monospace; }
+
+  .table-head {
+    @apply text-[10px] font-semibold uppercase tracking-[0.1em];
+    color: var(--muted);
+  }
+
+  .link-underline { @apply underline decoration-1 underline-offset-4; text-decoration-color: var(--rule); }
+  .link-underline:hover { text-decoration-color: var(--brand); color: var(--brand); }
+
+  /* Deep navy band used behind the sign-in panel. */
+  .navy-band {
+    background:
+      radial-gradient(1200px 500px at 80% -10%, rgba(21, 131, 181, 0.45), transparent 60%),
+      linear-gradient(160deg, var(--navy) 0%, var(--navy-deep) 100%);
+    color: #fff;
+  }
+
+  /*
+   * Hero band. A photograph sits under a navy gradient — dense on the left so the
+   * headline stays readable, clearing towards the right so the building shows.
+   * Drop your own image at public/hero.jpg; without it the gradient stands alone.
+   */
+  .hero-band {
+    position: relative;
+    color: #fff;
+    background-color: var(--navy-deep);
+    background-image:
+      /* A touch of extra shade along the bottom, so the search panel reads cleanly. */
+      linear-gradient(180deg, transparent 62%, rgba(9, 35, 67, 0.45) 100%),
+      /* Light touch — enough contrast for the text, the house still clearly visible. */
+      linear-gradient(100deg, rgba(9, 35, 67, 0.78) 0%, rgba(9, 35, 67, 0.58) 34%, rgba(11, 40, 76, 0.30) 62%, rgba(11, 40, 76, 0.12) 100%),
+      url('/hero.jpg');
+    background-size: cover, cover, cover;
+    background-position: center, center, center right;
+    background-repeat: no-repeat;
+  }
+
+  @media (max-width: 1024px) {
+    /* On a phone the panel sits over the middle of the photo, so darken further. */
+    .hero-band {
+      background-image:
+        linear-gradient(180deg, rgba(9, 35, 67, 0.82) 0%, rgba(9, 35, 67, 0.74) 55%, rgba(9, 35, 67, 0.86) 100%),
+        url('/hero.jpg');
+      background-position: center, center 30%;
+    }
+  }
+
+  .tile {
+    @apply flex flex-col gap-3 rounded-xl border bg-white p-5;
+    border-color: var(--rule);
+    box-shadow: var(--shadow-card);
+    transition: transform 0.35s var(--ease-spring), box-shadow 0.35s ease, border-color 0.25s ease;
+  }
+  .tile:hover { transform: translateY(-6px); box-shadow: var(--shadow-lift); border-color: var(--brand); }
+
+  .tile-icon {
+    @apply flex h-14 w-14 items-center justify-center rounded-2xl text-2xl;
+    transition: transform 0.4s var(--ease-spring);
+  }
+  .tile:hover .tile-icon { transform: scale(1.08) rotate(-4deg); }
+}
+
+.photo { @apply relative overflow-hidden bg-slate-100; }
+.photo img { @apply h-full w-full object-cover transition duration-500; }
+.group:hover .photo img { @apply scale-[1.04]; }
+
+/*
+ * Number spinners are removed everywhere. They are small targets, and the scroll
+ * wheel over a focused number field silently changes the value — which is how a
+ * 3-bedroom flat becomes a 7-bedroom one on the way down a form.
+ */
+input[type='number']::-webkit-outer-spin-button,
+input[type='number']::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+input[type='number'] { -moz-appearance: textfield; appearance: textfield; }
+
+/* A nav item that has just gained something pulses briefly, then settles. */
+@keyframes flash {
+  0%, 100% { background-color: #fdeaea; }
+  50% { background-color: #fbd5d5; }
+}
+.animate-flash { animation: flash 1.4s ease-in-out 3; }
+
+/* Rows in the CRM tables lift very slightly under the cursor. */
+.row-link { transition: background-color 160ms var(--ease-spring), transform 160ms var(--ease-spring); }
+.row-link:hover { background-color: var(--paper); }
+
+/* Sections lift into place as they arrive. Purely decorative, and switched off
+   entirely for anyone who has asked for reduced motion. */
+@keyframes rise {
+  from { opacity: 0; transform: translateY(14px); }
+  to { opacity: 1; transform: none; }
+}
+
+.animate-rise { animation: rise 0.6s var(--ease-spring) both; }
+
+/* Slow drift for the hero panel, so the page is never completely still. */
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-8px); }
+}
+.animate-float { animation: float 7s ease-in-out infinite; }
+
+/* Light sweep across a badge or button on hover. */
+@keyframes sheen {
+  from { transform: translateX(-120%); }
+  to { transform: translateX(220%); }
+}
+.sheen { position: relative; overflow: hidden; }
+.sheen::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  width: 40%;
+  background: linear-gradient(100deg, transparent, rgba(255, 255, 255, 0.45), transparent);
+  transform: translateX(-120%);
+}
+.sheen:hover::after { animation: sheen 0.9s ease forwards; }
+
+/* Underline that grows out from the left on hover. */
+.link-grow { position: relative; }
+.link-grow::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  bottom: -3px;
+  height: 2px;
+  width: 100%;
+  background: var(--brand);
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 0.3s var(--ease-spring);
+}
+.link-grow:hover::after { transform: scaleX(1); }
+
+.text-shadow-hero { text-shadow: 0 2px 24px rgba(4, 18, 36, 0.55); }
+.animate-rise-1 { animation: rise 0.6s var(--ease-spring) 0.06s both; }
+.animate-rise-2 { animation: rise 0.6s var(--ease-spring) 0.12s both; }
+.animate-rise-3 { animation: rise 0.6s var(--ease-spring) 0.18s both; }
+
+@media (prefers-reduced-motion: reduce) {
+  * { animation: none !important; transition: none !important; }
+  .animate-rise, .animate-rise-1, .animate-rise-2, .animate-rise-3 { opacity: 1; transform: none; }
+}

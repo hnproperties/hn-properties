@@ -1,0 +1,12 @@
+node_modules
+.next
+out
+.env
+.env*.local
+.vercel
+*.tsbuildinfo
+next-env.d.ts
+
+# Uploaded files from the local storage driver
+/public/uploads
+/private-uploads

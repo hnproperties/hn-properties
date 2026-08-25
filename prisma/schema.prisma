@@ -1,0 +1,1115 @@
+// HN Properties — schema v2
+// The private asset (Property) and what goes to market (Listing) are separate tables.
+// Public queries touch Listing only. That is the structural half of the privacy model.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+// ─────────────────────────────────────────────────────────── identity & access
+
+model Role {
+  id          String   @id @default(cuid())
+  key         String   @unique // SUPER_ADMIN, ADMIN, MANAGER, SALES, STAFF, PARTNER
+  name        String
+  description String?
+  isSystem    Boolean  @default(false) // system roles cannot be deleted
+  rank        Int      @default(100) // lower = more senior; used for "can manage user"
+  createdAt   DateTime @default(now())
+
+  permissions RolePermission[]
+  users       User[]
+}
+
+model Permission {
+  id       String  @id @default(cuid())
+  key      String  @unique // property.publish, owner.contact.view, export.bulk …
+  group    String // Properties, CRM, Deals, Network, System
+  label    String
+  isDanger Boolean @default(false)
+
+  roles     RolePermission[]
+  overrides UserPermissionOverride[]
+}
+
+model RolePermission {
+  roleId       String
+  permissionId String
+
+  role       Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@id([roleId, permissionId])
+}
+
+// Per-user grant or revoke on top of the role. Keeps "configurable permissions"
+// from forcing a new role every time one person needs one extra capability.
+model UserPermissionOverride {
+  userId       String
+  permissionId String
+  granted      Boolean // false = explicitly revoked
+
+  user       User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  permission Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@id([userId, permissionId])
+}
+
+model User {
+  id           String    @id @default(cuid())
+  code         String    @unique // EMP-0001 / PTR-0001
+  name         String
+  email        String    @unique
+  phone        String?
+  passwordHash String
+  avatarUrl    String?
+  isActive     Boolean   @default(true)
+  lastLoginAt  DateTime?
+  sessionEpoch Int       @default(0) // bumped on role/permission change to invalidate tokens
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  roleId       String
+  role         Role        @relation(fields: [roleId], references: [id])
+  consultantId String? // set when this user belongs to a partner firm
+  consultant   Consultant? @relation(fields: [consultantId], references: [id])
+
+  overrides         UserPermissionOverride[]
+  ownedProperties   Property[]               @relation("PropertyAssignee")
+  createdProperties Property[]               @relation("PropertyCreator")
+  listings          Listing[]                @relation("ListingAssignee")
+  owners            Owner[]                  @relation("OwnerAssignee")
+  clients           Client[]                 @relation("ClientAssignee")
+  leads             Lead[]                   @relation("LeadAssignee")
+  requirements      Requirement[]            @relation("RequirementAssignee")
+  siteVisits        SiteVisit[]              @relation("VisitAgent")
+  deals             Deal[]                   @relation("DealAgent")
+  followUps         FollowUp[]               @relation("FollowUpOwner")
+  verifications     Verification[]
+  auditLogs         AuditLog[]
+  notifications     Notification[]
+  exports           ExportLog[]
+  documents         PropertyDocument[]
+  activities        Activity[]
+
+  @@index([roleId, isActive])
+}
+
+// ─────────────────────────────────────────────────────────── geography & taxonomy
+
+enum LocationType {
+  COUNTRY
+  STATE
+  CITY
+  AREA
+  LOCALITY
+  LANDMARK
+}
+
+model Location {
+  id        String       @id @default(cuid())
+  type      LocationType
+  name      String
+  slug      String
+  code      String? // JBP, IDR — used in public property IDs at CITY level
+  latitude  Decimal?     @db.Decimal(10, 7)
+  longitude Decimal?     @db.Decimal(10, 7)
+  pincode   String?
+  isActive  Boolean      @default(true)
+  sortOrder Int          @default(0)
+
+  parentId String?
+  parent   Location?  @relation("LocationTree", fields: [parentId], references: [id])
+  children Location[] @relation("LocationTree")
+
+  properties        Property[]
+  listings          Listing[]
+  requirementAreas  RequirementLocation[]
+
+  @@unique([parentId, slug])
+  @@index([type, isActive])
+}
+
+enum CategorySegment {
+  RESIDENTIAL
+  COMMERCIAL
+  LAND
+}
+
+model PropertyCategory {
+  id        String          @id @default(cuid())
+  segment   CategorySegment
+  name      String // Flat, Shop, Agricultural Land …
+  slug      String          @unique
+  icon      String?
+  isActive  Boolean         @default(true)
+  sortOrder Int             @default(0)
+
+  // Which field groups the entry form should show for this category
+  hasBedrooms   Boolean @default(false)
+  hasFurnishing Boolean @default(false)
+  hasFrontage   Boolean @default(false)
+  isLand        Boolean @default(false)
+
+  parentId String?
+  parent   PropertyCategory?  @relation("CategoryTree", fields: [parentId], references: [id])
+  children PropertyCategory[] @relation("CategoryTree")
+
+  properties   Property[]
+  requirements RequirementCategory[]
+
+  @@index([segment, isActive])
+}
+
+// ─────────────────────────────────────────────────────────── property (private core)
+
+enum AreaUnit {
+  SQFT
+  SQM
+  SQYD
+  ACRE
+  HECTARE
+  BIGHA
+}
+
+enum Facing {
+  NORTH
+  SOUTH
+  EAST
+  WEST
+  NORTH_EAST
+  NORTH_WEST
+  SOUTH_EAST
+  SOUTH_WEST
+}
+
+enum Furnishing {
+  UNFURNISHED
+  SEMI_FURNISHED
+  FURNISHED
+}
+
+enum OwnerMotivation {
+  NORMAL
+  MOTIVATED
+  URGENT
+  VERY_URGENT
+  INVESTMENT
+  RELOCATING
+  OTHER
+}
+
+enum SourceType {
+  DIRECT_OWNER
+  EXISTING_CLIENT
+  REFERRAL
+  WEBSITE
+  WHATSAPP
+  INSTAGRAM
+  FACEBOOK
+  CONSULTANT
+  EMPLOYEE
+  COLD_LEAD
+  OTHER
+}
+
+model Property {
+  id       String @id @default(cuid())
+  code     String @unique // internal: HNP-JBP-000124
+  title    String
+  summary  String? @db.Text
+
+  categoryId String
+  category   PropertyCategory @relation(fields: [categoryId], references: [id])
+
+  // location — locationId points at the AREA/LOCALITY node; publicLocationId is the
+  // coarser node shown publicly when the exact locality should not be revealed
+  locationId       String
+  location         Location @relation(fields: [locationId], references: [id])
+  colony           String?
+  landmark         String?
+  road             String?
+  ward             String?
+  pincode          String?
+  addressLine      String? // PRIVATE — exact address
+  mapLink          String? // PRIVATE — Google Maps link the owner shared
+  latitude         Decimal? @db.Decimal(10, 7) // PRIVATE
+  longitude        Decimal? @db.Decimal(10, 7) // PRIVATE
+
+  // measurements
+  plotArea        Decimal? @db.Decimal(12, 2)
+  builtUpArea     Decimal? @db.Decimal(12, 2)
+  carpetArea      Decimal? @db.Decimal(12, 2)
+  superBuiltArea  Decimal? @db.Decimal(12, 2)
+  areaUnit        AreaUnit @default(SQFT)
+  frontFeet       Decimal? @db.Decimal(8, 2)
+  depthFeet       Decimal? @db.Decimal(8, 2)
+  totalFloors     Int?
+  floorNumber     Int?
+
+  // residential
+  bedrooms         Int?
+  bathrooms        Int?
+  balconies        Int?
+  parkingCovered   Int?
+  parkingOpen      Int?
+  furnishing       Furnishing?
+  constructionYear Int?
+
+  // commercial / land
+  frontageFeet     Decimal? @db.Decimal(8, 2)
+  ceilingHeightFt  Decimal? @db.Decimal(6, 2)
+  roadWidthFeet    Decimal? @db.Decimal(6, 2)
+  powerKva         Decimal? @db.Decimal(8, 2)
+  loadingAccess    Boolean  @default(false)
+  suitableFor      String[] // business types
+  footfallNote     String?
+
+  facing        Facing?
+  isCorner      Boolean @default(false)
+  isMainRoad    Boolean @default(false)
+  isGated       Boolean @default(false)
+  isReadyToMove Boolean @default(false)
+  amenities     String[]
+
+  // PRIVATE commercial intelligence
+  minimumPrice     Decimal?         @db.Decimal(14, 2)
+  ownerExpectation Decimal?         @db.Decimal(14, 2)
+  negotiationNote  String?          @db.Text
+  motivation       OwnerMotivation  @default(NORMAL)
+  internalScore    Int? // 0-100
+  sourceType       SourceType       @default(DIRECT_OWNER)
+  sourceDetail     String?
+  privateNotes     String?          @db.Text
+
+  ownerId String?
+  owner   Owner?  @relation(fields: [ownerId], references: [id])
+
+  assignedToId String?
+  assignedTo   User?   @relation("PropertyAssignee", fields: [assignedToId], references: [id])
+  createdById  String?
+  createdBy    User?   @relation("PropertyCreator", fields: [createdById], references: [id])
+
+  isVerified  Boolean   @default(false)
+  verifiedAt  DateTime?
+  isArchived  Boolean   @default(false)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  listings      Listing[]
+  media         PropertyMedia[]
+  documents     PropertyDocument[]
+  verifications Verification[]
+  priceHistory  PriceHistory[]
+  activities    Activity[]
+
+  @@index([categoryId, locationId])
+  @@index([assignedToId])
+  @@index([ownerId])
+}
+
+// ─────────────────────────────────────────────────────────── listing (market face)
+
+enum ListingType {
+  SALE
+  RENT
+  LEASE
+}
+
+enum ListingStatus {
+  DRAFT
+  SUBMITTED
+  UNDER_VERIFICATION
+  VERIFIED
+  PUBLISHED
+  ON_HOLD
+  SOLD
+  RENTED
+  EXPIRED
+  REJECTED
+  OFF_MARKET
+  COMING_SOON
+  ARCHIVED
+}
+
+enum Visibility {
+  PUBLIC
+  PARTNER // visible to approved partner consultants only
+  PRIVATE // internal inventory; never indexed, never served publicly
+}
+
+model Listing {
+  id       String @id @default(cuid())
+  publicId String @unique // HNP-S-JBP-000001 — never changes
+  slug     String @unique
+
+  propertyId String
+  property   Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+
+  listingType ListingType
+  status      ListingStatus @default(DRAFT)
+  visibility  Visibility    @default(PRIVATE)
+  isFeatured  Boolean       @default(false)
+
+  // public commercials
+  price            Decimal? @db.Decimal(14, 2) // sale price or monthly rent
+  pricePerUnit     Decimal? @db.Decimal(12, 2)
+  isPriceOnRequest Boolean  @default(false)
+  isNegotiable     Boolean  @default(true)
+  maintenance      Decimal? @db.Decimal(12, 2)
+
+  // rent / lease terms
+  securityDeposit  Decimal? @db.Decimal(14, 2)
+  leaseMonths      Int?
+  lockInMonths     Int?
+  escalationPct    Decimal? @db.Decimal(5, 2)
+
+  // public-facing copy and location
+  publicTitle       String
+  publicDescription String?   @db.Text
+  publicLocationId  String?
+  publicLocation    Location? @relation(fields: [publicLocationId], references: [id])
+
+  // SEO
+  seoTitle       String?
+  seoDescription String?
+  ogImageUrl     String?
+
+  publishedAt   DateTime?
+  expiresAt     DateTime?
+  lastCheckedAt DateTime? // availability confirmed with owner
+  nextCheckAt   DateTime?
+  viewCount     Int       @default(0)
+
+  assignedToId String?
+  assignedTo   User?   @relation("ListingAssignee", fields: [assignedToId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  enquiries     Enquiry[]
+  leads         Lead[]
+  siteVisits    SiteVisit[]
+  deals         Deal[]
+  views         ListingView[]
+  favorites     Favorite[]
+  matches       RequirementMatch[]
+  collaborations Collaboration[]
+  priceHistory  PriceHistory[]
+
+  @@unique([propertyId, listingType])
+  @@index([status, visibility, listingType])
+  @@index([publicLocationId, price])
+  @@index([publishedAt])
+}
+
+model PropertyMedia {
+  id         String   @id @default(cuid())
+  propertyId String
+  property   Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  url        String
+  thumbUrl   String?
+  alt        String?
+  caption    String?
+  isCover    Boolean  @default(false)
+  isPublic   Boolean  @default(true)
+  sortOrder  Int      @default(0)
+  createdAt  DateTime @default(now())
+
+  @@index([propertyId, sortOrder])
+}
+
+enum DocumentKind {
+  REGISTRY
+  SALE_DEED
+  KHASRA
+  B1
+  DIVERSION
+  TAX_RECEIPT
+  NOC
+  MAP
+  BUILDING_PERMISSION
+  AGREEMENT
+  ID_PROOF
+  OTHER
+}
+
+// Private always. Served only via /api/documents/[id] → authorise → log → signed URL.
+model PropertyDocument {
+  id           String       @id @default(cuid())
+  propertyId   String
+  property     Property     @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  kind         DocumentKind
+  title        String
+  storageKey   String // private bucket key — never sent to the browser
+  mimeType     String?
+  sizeBytes    Int?
+  notes        String?
+  uploadedById String?
+  uploadedBy   User?        @relation(fields: [uploadedById], references: [id])
+  createdAt    DateTime     @default(now())
+
+  @@index([propertyId, kind])
+}
+
+model Verification {
+  id           String   @id @default(cuid())
+  propertyId   String
+  property     Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  ownerIdSeen  Boolean  @default(false)
+  siteVisited  Boolean  @default(false)
+  docsReceived Boolean  @default(false)
+  photosOurs   Boolean  @default(false)
+  availability Boolean  @default(false)
+  notes        String?
+  passed       Boolean  @default(false)
+  verifiedById String?
+  verifiedBy   User?    @relation(fields: [verifiedById], references: [id])
+  createdAt    DateTime @default(now())
+
+  @@index([propertyId])
+}
+
+model PriceHistory {
+  id         String   @id @default(cuid())
+  propertyId String
+  property   Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  listingId  String?
+  listing    Listing? @relation(fields: [listingId], references: [id], onDelete: SetNull)
+  field      String // price, minimumPrice, ownerExpectation
+  oldValue   Decimal? @db.Decimal(14, 2)
+  newValue   Decimal? @db.Decimal(14, 2)
+  changedById String?
+  reason     String?
+  createdAt  DateTime @default(now())
+
+  @@index([propertyId, createdAt])
+}
+
+model ListingView {
+  id        String   @id @default(cuid())
+  listingId String
+  listing   Listing  @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  sessionId String?
+  referrer  String?
+  createdAt DateTime @default(now())
+
+  @@index([listingId, createdAt])
+}
+
+model Favorite {
+  id         String   @id @default(cuid())
+  listingId  String
+  listing    Listing  @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  visitorKey String // anonymous browser key now; user id later
+  createdAt  DateTime @default(now())
+
+  @@unique([listingId, visitorKey])
+}
+
+// ─────────────────────────────────────────────────────────── people
+
+enum ContactMethod {
+  CALL
+  WHATSAPP
+  EMAIL
+}
+
+enum RecordStatus {
+  ACTIVE
+  INACTIVE
+  BLACKLISTED
+}
+
+model Owner {
+  id             String        @id @default(cuid())
+  code           String        @unique // OWN-0001
+  name           String
+  phone          String
+  altPhone       String?
+  whatsapp       String?
+  email          String?
+  address        String?
+  preferredVia   ContactMethod @default(CALL)
+  sourceType     SourceType    @default(DIRECT_OWNER)
+  sourceDetail   String?
+  notes          String?       @db.Text
+  status         RecordStatus  @default(ACTIVE)
+  lastContactAt  DateTime?
+  assignedToId   String?
+  assignedTo     User?         @relation("OwnerAssignee", fields: [assignedToId], references: [id])
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  properties Property[]
+  followUps  FollowUp[]
+  deals      Deal[]     @relation("DealSeller")
+
+  @@index([phone])
+  @@index([assignedToId])
+}
+
+enum ClientKind {
+  BUYER
+  TENANT
+  INVESTOR
+  SELLER
+  LANDLORD
+}
+
+enum FinancingStatus {
+  SELF_FUNDED
+  LOAN_REQUIRED
+  LOAN_APPROVED
+  UNKNOWN
+}
+
+model Client {
+  id            String          @id @default(cuid())
+  code          String          @unique // CLT-0001
+  name          String
+  phone         String
+  whatsapp      String?
+  email         String?
+  kind          ClientKind      @default(BUYER)
+  budgetMin     Decimal?        @db.Decimal(14, 2)
+  budgetMax     Decimal?        @db.Decimal(14, 2)
+  purpose       String?
+  financing     FinancingStatus @default(UNKNOWN)
+  timeline      String?
+  notes         String?         @db.Text
+  status        RecordStatus    @default(ACTIVE)
+  sourceType    SourceType      @default(WEBSITE)
+  lastContactAt DateTime?
+  assignedToId  String?
+  assignedTo    User?           @relation("ClientAssignee", fields: [assignedToId], references: [id])
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+
+  requirements Requirement[]
+  leads        Lead[]
+  siteVisits   SiteVisit[]
+  deals        Deal[]        @relation("DealBuyer")
+  followUps    FollowUp[]
+
+  @@index([phone])
+  @@index([assignedToId])
+}
+
+// ─────────────────────────────────────────────────────────── demand
+
+enum RequirementStatus {
+  OPEN
+  MATCHING
+  SHARED
+  ON_HOLD
+  FULFILLED
+  CLOSED
+}
+
+model Requirement {
+  id          String            @id @default(cuid())
+  code        String            @unique // REQ-0001
+  clientId    String
+  client      Client            @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  listingType ListingType       @default(SALE)
+  status      RequirementStatus @default(OPEN)
+
+  budgetMin   Decimal? @db.Decimal(14, 2)
+  budgetMax   Decimal? @db.Decimal(14, 2)
+  areaMin     Decimal? @db.Decimal(12, 2)
+  areaMax     Decimal? @db.Decimal(12, 2)
+  areaUnit    AreaUnit @default(SQFT)
+  bedroomsMin Int?
+  bathroomsMin Int?
+  facing      Facing?
+  purpose     String?
+  timeline    String?
+  notes       String?  @db.Text
+
+  assignedToId String?
+  assignedTo   User?   @relation("RequirementAssignee", fields: [assignedToId], references: [id])
+
+  // A requirement can be published as a public "wanted" notice. The client is never
+  // named — only what they are looking for, so owners can come forward.
+  isPublic     Boolean  @default(false)
+  publicNote   String?  @db.Text
+  publishedAt  DateTime?
+
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  categories RequirementCategory[]
+  locations  RequirementLocation[]
+  matches    RequirementMatch[]
+  leads      Lead[]
+
+  @@index([status, listingType])
+  @@index([clientId])
+}
+
+model RequirementCategory {
+  requirementId String
+  categoryId    String
+  requirement   Requirement      @relation(fields: [requirementId], references: [id], onDelete: Cascade)
+  category      PropertyCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  @@id([requirementId, categoryId])
+}
+
+model RequirementLocation {
+  requirementId String
+  locationId    String
+  requirement   Requirement @relation(fields: [requirementId], references: [id], onDelete: Cascade)
+  location      Location    @relation(fields: [locationId], references: [id], onDelete: Cascade)
+
+  @@id([requirementId, locationId])
+}
+
+// Cached matcher output so both sides can show counts without recomputing.
+model RequirementMatch {
+  id            String      @id @default(cuid())
+  requirementId String
+  requirement   Requirement @relation(fields: [requirementId], references: [id], onDelete: Cascade)
+  listingId     String
+  listing       Listing     @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  score         Int // 0-100
+  reasons       String[]
+  isShared      Boolean     @default(false)
+  isRejected    Boolean     @default(false)
+  computedAt    DateTime    @default(now())
+
+  @@unique([requirementId, listingId])
+  @@index([listingId, score])
+}
+
+// ─────────────────────────────────────────────────────────── leads & activity
+
+enum LeadStatus {
+  NEW
+  CONTACTED
+  QUALIFIED
+  PROPERTY_SHARED
+  VISIT_SCHEDULED
+  VISIT_COMPLETED
+  NEGOTIATION
+  TOKEN
+  FOLLOW_UP
+  CLOSED_WON
+  CLOSED_LOST
+}
+
+enum Priority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+model Lead {
+  id       String     @id @default(cuid())
+  code     String     @unique // LED-0001
+  name     String
+  phone    String
+  whatsapp String?
+  email    String?
+  message  String?    @db.Text
+  status   LeadStatus @default(NEW)
+  priority Priority   @default(MEDIUM)
+
+  sourceType   SourceType @default(WEBSITE)
+  sourceDetail String?
+
+  listingId     String?
+  listing       Listing?     @relation(fields: [listingId], references: [id], onDelete: SetNull)
+  clientId      String?
+  client        Client?      @relation(fields: [clientId], references: [id], onDelete: SetNull)
+  requirementId String?
+  requirement   Requirement? @relation(fields: [requirementId], references: [id], onDelete: SetNull)
+  consultantId  String?
+  consultant    Consultant?  @relation(fields: [consultantId], references: [id], onDelete: SetNull)
+
+  assignedToId  String?
+  assignedTo    User?     @relation("LeadAssignee", fields: [assignedToId], references: [id])
+  lastContactAt DateTime?
+  lostReason    String?
+  notes         String?   @db.Text
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  siteVisits SiteVisit[]
+  followUps  FollowUp[]
+  deals      Deal[]
+
+  @@index([status, assignedToId])
+  @@index([phone])
+  @@index([createdAt])
+}
+
+// Raw public submission, kept separate from Lead so the marketing funnel stays auditable.
+model Enquiry {
+  id          String   @id @default(cuid())
+  listingId   String?
+  listing     Listing? @relation(fields: [listingId], references: [id], onDelete: SetNull)
+  name        String
+  phone       String
+  whatsapp    String?
+  email       String?
+  message     String?  @db.Text
+  preferredAt String?
+  kind        String   @default("ENQUIRY") // ENQUIRY | SITE_VISIT | SELL | RENT_OUT | REQUIREMENT
+  ipHash      String?
+  userAgent   String?
+  leadId      String?
+  createdAt   DateTime @default(now())
+
+  @@index([phone, createdAt])
+  @@index([listingId])
+}
+
+model FollowUp {
+  id          String    @id @default(cuid())
+  dueAt       DateTime
+  note        String?
+  isDone      Boolean   @default(false)
+  completedAt DateTime?
+
+  leadId   String?
+  lead     Lead?   @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  clientId String?
+  client   Client? @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  ownerId  String?
+  owner    Owner?  @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+
+  assignedToId String?
+  assignedTo   User?   @relation("FollowUpOwner", fields: [assignedToId], references: [id])
+  createdAt    DateTime @default(now())
+
+  @@index([dueAt, isDone])
+  @@index([assignedToId, dueAt])
+}
+
+// ─────────────────────────────────────────────────────────── visits, offers, deals
+
+enum VisitStatus {
+  REQUESTED
+  SCHEDULED
+  CONFIRMED
+  COMPLETED
+  CANCELLED
+  RESCHEDULED
+}
+
+enum InterestLevel {
+  HIGH
+  MEDIUM
+  LOW
+  NOT_INTERESTED
+}
+
+model SiteVisit {
+  id          String      @id @default(cuid())
+  code        String      @unique // VST-0001
+  listingId   String
+  listing     Listing     @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  clientId    String?
+  client      Client?     @relation(fields: [clientId], references: [id], onDelete: SetNull)
+  leadId      String?
+  lead        Lead?       @relation(fields: [leadId], references: [id], onDelete: SetNull)
+  scheduledAt DateTime
+  status      VisitStatus @default(REQUESTED)
+
+  agentId        String?
+  agent          User?          @relation("VisitAgent", fields: [agentId], references: [id])
+  ownerAvailable Boolean        @default(false)
+  feedback       String?        @db.Text
+  interest       InterestLevel?
+  followUpAt     DateTime?
+  notes          String?        @db.Text
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  @@index([scheduledAt, status])
+  @@index([agentId])
+}
+
+enum OfferBy {
+  BUYER
+  OWNER
+}
+
+// The negotiation trail. Private in every direction.
+model Offer {
+  id        String   @id @default(cuid())
+  dealId    String
+  deal      Deal     @relation(fields: [dealId], references: [id], onDelete: Cascade)
+  by        OfferBy
+  amount    Decimal  @db.Decimal(14, 2)
+  note      String?
+  createdAt DateTime @default(now())
+
+  @@index([dealId, createdAt])
+}
+
+enum DealStage {
+  DISCUSSION
+  NEGOTIATION
+  TOKEN
+  AGREEMENT
+  REGISTRATION
+  CLOSED_WON
+  CLOSED_LOST
+}
+
+model Deal {
+  id        String      @id @default(cuid())
+  code      String      @unique // DEL-0001
+  listingId String
+  listing   Listing     @relation(fields: [listingId], references: [id])
+  stage     DealStage   @default(DISCUSSION)
+  dealType  ListingType @default(SALE)
+
+  sellerId String?
+  seller   Owner?  @relation("DealSeller", fields: [sellerId], references: [id])
+  buyerId  String?
+  buyer    Client? @relation("DealBuyer", fields: [buyerId], references: [id])
+  leadId   String?
+  lead     Lead?   @relation(fields: [leadId], references: [id], onDelete: SetNull)
+
+  askingPrice Decimal? @db.Decimal(14, 2)
+  agreedPrice Decimal? @db.Decimal(14, 2)
+  tokenAmount Decimal? @db.Decimal(14, 2)
+
+  // rental terms
+  monthlyRent   Decimal? @db.Decimal(12, 2)
+  deposit       Decimal? @db.Decimal(14, 2)
+  leaseMonths   Int?
+  lockInMonths  Int?
+  escalationPct Decimal? @db.Decimal(5, 2)
+
+  agreementDate    DateTime?
+  registrationDate DateTime?
+  lostReason       String?
+  notes            String?   @db.Text
+
+  agentId String?
+  agent   User?   @relation("DealAgent", fields: [agentId], references: [id])
+
+  consultantId String?
+  consultant   Consultant? @relation(fields: [consultantId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  offers      Offer[]
+  payments    Payment[]
+  commissions Commission[]
+
+  @@index([stage])
+  @@index([agentId])
+}
+
+enum PaymentDirection {
+  INCOMING
+  OUTGOING
+}
+
+enum PaymentStatus {
+  PENDING
+  PARTIAL
+  RECEIVED
+  OVERDUE
+  CANCELLED
+}
+
+model Payment {
+  id        String           @id @default(cuid())
+  dealId    String
+  deal      Deal             @relation(fields: [dealId], references: [id], onDelete: Cascade)
+  direction PaymentDirection @default(INCOMING)
+  label     String // Token, Brokerage, Consultant share …
+  amount    Decimal          @db.Decimal(14, 2)
+  dueAt     DateTime?
+  paidAt    DateTime?
+  method    String?
+  reference String?
+  status    PaymentStatus    @default(PENDING)
+  notes     String?
+  createdAt DateTime         @default(now())
+
+  @@index([dealId, status])
+  @@index([dueAt])
+}
+
+// RESTRICTED — commission visibility is its own permission.
+model Commission {
+  id           String      @id @default(cuid())
+  dealId       String
+  deal         Deal        @relation(fields: [dealId], references: [id], onDelete: Cascade)
+  party        String // HN Properties, consultant name, employee name
+  userId       String?
+  consultantId String?
+  consultant   Consultant? @relation(fields: [consultantId], references: [id])
+  percent      Decimal?    @db.Decimal(5, 2)
+  amount       Decimal     @db.Decimal(14, 2)
+  isReceived   Boolean     @default(false)
+  receivedAt   DateTime?
+  notes        String?
+  createdAt    DateTime    @default(now())
+
+  @@index([dealId])
+}
+
+// ─────────────────────────────────────────────────────────── partner network
+
+enum ConsultantStatus {
+  PENDING
+  APPROVED
+  SUSPENDED
+  REJECTED
+}
+
+model Consultant {
+  id            String           @id @default(cuid())
+  code          String           @unique // PTR-0001
+  firmName      String
+  contactName   String
+  phone         String
+  whatsapp      String?
+  email         String?
+  city          String?
+  status        ConsultantStatus @default(PENDING)
+  commissionPct Decimal?         @db.Decimal(5, 2)
+  notes         String?          @db.Text
+  approvedAt    DateTime?
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+
+  users          User[]
+  collaborations Collaboration[]
+  leads          Lead[]
+  deals          Deal[]
+  commissions    Commission[]
+}
+
+enum CollaborationStatus {
+  PENDING
+  APPROVED
+  SHARED
+  REJECTED
+  CLOSED
+}
+
+model Collaboration {
+  id           String              @id @default(cuid())
+  code         String              @unique // COL-0001
+  consultantId String
+  consultant   Consultant          @relation(fields: [consultantId], references: [id], onDelete: Cascade)
+  listingId    String?
+  listing      Listing?            @relation(fields: [listingId], references: [id], onDelete: SetNull)
+  status       CollaborationStatus @default(PENDING)
+
+  clientBrief  String? @db.Text // what the partner's client wants — no client PII required
+  sharedFields String[] // explicitly approved extra fields, e.g. ["ownerExpectation"]
+  responseNote String?
+  decidedAt    DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  @@index([consultantId, status])
+}
+
+// ─────────────────────────────────────────────────────────── platform
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  kind      String // LEAD_NEW, VISIT_TOMORROW, FOLLOWUP_DUE, LISTING_EXPIRING …
+  title     String
+  body      String?
+  href      String?
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([userId, isRead, createdAt])
+}
+
+model SavedSearch {
+  id         String   @id @default(cuid())
+  visitorKey String
+  name       String?
+  query      Json // the same filter shape the /buy page uses
+  alertPhone String?
+  alertEmail String?
+  isActive   Boolean  @default(true)
+  lastRunAt  DateTime?
+  createdAt  DateTime @default(now())
+
+  @@index([visitorKey])
+}
+
+// Append-only. Written by a helper that every mutating path must call.
+model AuditLog {
+  id         String   @id @default(cuid())
+  userId     String?
+  user       User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  action     String // property.price.changed, owner.contact.viewed, export.performed …
+  entityType String?
+  entityId   String?
+  entityCode String?
+  summary    String? // "₹1.25 Cr → ₹1.20 Cr"
+  meta       Json?
+  ipHash     String?
+  createdAt  DateTime @default(now())
+
+  @@index([entityType, entityId, createdAt])
+  @@index([userId, createdAt])
+}
+
+model ExportLog {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  resource  String
+  rowCount  Int
+  filters   Json?
+  createdAt DateTime @default(now())
+
+  @@index([userId, createdAt])
+}
+
+// Per-record timeline shown in the CRM.
+model Activity {
+  id         String   @id @default(cuid())
+  entityType String
+  entityId   String
+  propertyId String?
+  property   Property? @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  userId     String?
+  user       User?     @relation(fields: [userId], references: [id], onDelete: SetNull)
+  action     String
+  detail     String?
+  createdAt  DateTime  @default(now())
+
+  @@index([entityType, entityId, createdAt])
+}
+
+model Setting {
+  key       String   @id // company.name, commission.default.sale, match.weight.budget …
+  value     Json
+  group     String   @default("general")
+  updatedAt DateTime @updatedAt
+}
+
+// Atomic sequence source for HNP-S-JBP-000001, OWN-0001, LED-0001 …
+model Counter {
+  key   String @id
+  value Int    @default(0)
+}

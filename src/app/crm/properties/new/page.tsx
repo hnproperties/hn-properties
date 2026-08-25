@@ -1,0 +1,557 @@
+'use client';
+
+import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import {
+  toOptions, AREA_UNITS, FACINGS, FURNISHINGS, MOTIVATIONS, SOURCE_TYPES,
+  AMENITY_OPTIONS, BUSINESS_SUITABILITY, LISTING_TYPES, VISIBILITIES,
+} from '@/lib/constants';
+import { useCan } from '@/components/crm/CrmShell';
+import PhotoUploader from '@/components/crm/PhotoUploader';
+import LocationPicker from '@/components/LocationPicker';
+import { inr } from '@/lib/format';
+
+type Option = { value: string; label: string };
+
+const STEPS = [
+  'Basics', 'Location', 'Details', 'Financials', 'Owner',
+  'Photos', 'Documents', 'Visibility', 'Verification', 'Publish',
+];
+
+/**
+ * Defined at module scope on purpose. A component declared inside the wizard would
+ * be a brand-new component type on every render, so React would unmount and remount
+ * each input on every keystroke — which drops the cursor after each character.
+ */
+function Field({ label, children, half }: { label: string; children: React.ReactNode; half?: boolean }) {
+  return (
+    <div className={half ? '' : 'sm:col-span-2'}>
+      <span className="label">{label}</span>
+      {children}
+    </div>
+  );
+}
+
+/**
+ * Creates a real Property, then a real Listing, then optional documents.
+ * Draft-saveable: step 1 already writes the property, so nothing is lost if the
+ * browser closes halfway through.
+ */
+export default function PropertyWizard() {
+  const router = useRouter();
+  const can = useCan();
+
+  const [step, setStep] = useState(0);
+  const [lookups, setLookups] = useState<Record<string, Option[]>>({});
+  const [form, setForm] = useState<Record<string, any>>({ areaUnit: 'SQFT', motivation: 'NORMAL', sourceType: 'DIRECT_OWNER' });
+  const [listing, setListing] = useState<Record<string, any>>({ listingType: 'SALE', visibility: 'PRIVATE', isNegotiable: true });
+  const [photos, setPhotos] = useState<string[]>([]);
+  const [documents, setDocuments] = useState<{ kind: string; title: string; storageKey: string }[]>([]);
+  const [verification, setVerification] = useState<Record<string, boolean>>({});
+  const [propertyId, setPropertyId] = useState<string | null>(null);
+  const [listingId, setListingId] = useState<string | null>(null);
+  const [publicId, setPublicId] = useState<string | null>(null);
+  const [duplicates, setDuplicates] = useState<any[]>([]);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const set = (name: string, value: any) => setForm((current) => ({ ...current, [name]: value }));
+  const setL = (name: string, value: any) => setListing((current) => ({ ...current, [name]: value }));
+
+  useEffect(() => {
+    for (const name of ['categories', 'locations', 'owners', 'users']) {
+      fetch(`/api/lookups?name=${name}`)
+        .then((r) => r.json())
+        .then((payload) => setLookups((current) => ({ ...current, [name]: payload.data ?? [] })))
+        .catch(() => undefined);
+    }
+  }, []);
+
+  /** Duplicate check before the property is written, per the brief. */
+  async function checkDuplicates() {
+    const search = new URLSearchParams();
+    if (form.locationId) search.set('locationId', form.locationId);
+    if (form.categoryId) search.set('categoryId', form.categoryId);
+    if (form.plotArea || form.builtUpArea) search.set('area', String(form.plotArea ?? form.builtUpArea));
+    try {
+      const response = await fetch(`/api/properties/duplicates?${search.toString()}`);
+      const payload = await response.json();
+      setDuplicates(payload.data ?? []);
+    } catch {
+      setDuplicates([]);
+    }
+  }
+
+  async function saveProperty() {
+    setBusy(true);
+    setError(null);
+    try {
+      const body = { ...form, media: photos.map((url, index) => ({ url, isCover: index === 0, sortOrder: index })) };
+      const response = await fetch(propertyId ? `/api/properties/${propertyId}` : '/api/properties', {
+        method: propertyId ? 'PATCH' : 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      const payload = await response.json();
+      if (!response.ok) throw new Error(payload.error ?? 'Could not save the property');
+      setPropertyId(payload.data.id);
+      return payload.data.id as string;
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not save');
+      throw err;
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function saveListing(status: string) {
+    const id = propertyId ?? (await saveProperty());
+    setBusy(true);
+    setError(null);
+    try {
+      const body = { ...listing, propertyId: id, status, publicTitle: listing.publicTitle || form.title };
+      const response = await fetch(listingId ? `/api/listings/${listingId}` : '/api/listings', {
+        method: listingId ? 'PATCH' : 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      const payload = await response.json();
+      if (!response.ok) throw new Error(payload.error ?? 'Could not save the listing');
+      setListingId(payload.data.id);
+      setPublicId(payload.data.publicId);
+      return payload.data;
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not save');
+      throw err;
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function saveDocuments(id: string) {
+    for (const document of documents) {
+      if (!document.title || !document.storageKey) continue;
+      await fetch('/api/documents', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...document, propertyId: id }),
+      }).catch(() => undefined);
+    }
+  }
+
+  async function next() {
+    try {
+      if (step === 0) await checkDuplicates();
+      if (step === 3) await saveProperty();
+      if (step === 6 && propertyId) await saveDocuments(propertyId);
+      setStep((s) => Math.min(STEPS.length - 1, s + 1));
+    } catch {
+      /* the error is already on screen */
+    }
+  }
+
+  async function finish(status: 'DRAFT' | 'PUBLISHED' | 'COMING_SOON') {
+    try {
+      await saveProperty();
+      const saved = await saveListing(status);
+      if (propertyId && Object.values(verification).some(Boolean)) {
+        // Verification is recorded against the property, not the listing.
+        await fetch(`/api/properties/${propertyId}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ privateNotes: [form.privateNotes, 'Verification checklist completed at entry.'].filter(Boolean).join('\n') }),
+        }).catch(() => undefined);
+      }
+      router.push(`/crm/properties/${saved.propertyId ?? propertyId}`);
+      router.refresh();
+    } catch {
+      /* the error is already on screen */
+    }
+  }
+
+  const options = (name: string) => lookups[name] ?? [];
+  return (
+    <div>
+      <header>
+        <h1 className="display text-2xl">Add a property</h1>
+        <p className="mt-1 text-sm text-[var(--muted)]">
+          Ten steps. The property is saved after step four, so you can stop and come back.
+        </p>
+      </header>
+
+      {/* Progress */}
+      <ol className="mt-6 flex flex-wrap gap-1.5">
+        {STEPS.map((name, index) => (
+          <li key={name}>
+            <button
+              type="button"
+              onClick={() => index <= step && setStep(index)}
+              className={`rounded-[3px] border px-2.5 py-1 text-xs ${
+                index === step
+                  ? 'border-[var(--brand)] bg-[var(--brand-soft)] text-[var(--brand)]'
+                  : index < step
+                    ? 'text-[var(--ink-soft)]'
+                    : 'text-[var(--muted)] opacity-60'
+              }`}
+            >
+              <span className="mono">{index + 1}</span> {name}
+            </button>
+          </li>
+        ))}
+      </ol>
+
+      <div className="plate mt-5 p-6">
+        <div className="grid gap-4 sm:grid-cols-2">
+          {step === 0 && (
+            <>
+              <Field label="Internal title">
+                <input className="field" value={form.title ?? ''} onChange={(e) => set('title', e.target.value)} placeholder="3BHK flat in Napier Town" />
+              </Field>
+              <Field label="Category" half>
+                <select className="field" value={form.categoryId ?? ''} onChange={(e) => set('categoryId', e.target.value)}>
+                  <option value="">Select</option>
+                  {options('categories').map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+                </select>
+              </Field>
+              <Field label="Source" half>
+                <select className="field" value={form.sourceType ?? ''} onChange={(e) => set('sourceType', e.target.value)}>
+                  {toOptions(SOURCE_TYPES).map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+                </select>
+              </Field>
+              <Field label="Description">
+                <textarea className="field min-h-[90px]" value={form.summary ?? ''} onChange={(e) => set('summary', e.target.value)} />
+              </Field>
+            </>
+          )}
+
+          {step === 1 && (
+            <>
+              <Field label="Locality" half>
+                <select className="field" value={form.locationId ?? ''} onChange={(e) => set('locationId', e.target.value)}>
+                  <option value="">Select</option>
+                  {options('locations').map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+                </select>
+              </Field>
+              <Field label="Colony" half><input className="field" value={form.colony ?? ''} onChange={(e) => set('colony', e.target.value)} /></Field>
+              <Field label="Landmark" half><input className="field" value={form.landmark ?? ''} onChange={(e) => set('landmark', e.target.value)} /></Field>
+              <Field label="Road" half><input className="field" value={form.road ?? ''} onChange={(e) => set('road', e.target.value)} /></Field>
+              <Field label="Ward" half><input className="field" value={form.ward ?? ''} onChange={(e) => set('ward', e.target.value)} /></Field>
+              <Field label="PIN code" half><input className="field" value={form.pincode ?? ''} onChange={(e) => set('pincode', e.target.value)} /></Field>
+              <Field label="Exact address (private, never published)">
+                <input className="field" value={form.addressLine ?? ''} onChange={(e) => set('addressLine', e.target.value)} />
+              </Field>
+              <div className="sm:col-span-2">
+                <LocationPicker
+                  label="Location on the map (private)"
+                  value={
+                    form.mapLink ??
+                    (form.latitude && form.longitude ? `${form.latitude},${form.longitude}` : '')
+                  }
+                  onChange={(next) => {
+                    set('mapLink', next);
+                    // Keep the coordinate columns in step, so reports and the map link agree.
+                    const match = next.match(/(-?\d{1,3}\.\d+)[, ]+(-?\d{1,3}\.\d+)/);
+                    set('latitude', match ? match[1] : '');
+                    set('longitude', match ? match[2] : '');
+                  }}
+                />
+              </div>
+            </>
+          )}
+
+          {step === 2 && (
+            <>
+              <Field label="Plot area" half><input type="number" onWheel={(e) => (e.target as HTMLInputElement).blur()} className="field" value={form.plotArea ?? ''} onChange={(e) => set('plotArea', e.target.value)} /></Field>
+              <Field label="Built-up area" half><input type="number" onWheel={(e) => (e.target as HTMLInputElement).blur()} className="field" value={form.builtUpArea ?? ''} onChange={(e) => set('builtUpArea', e.target.value)} /></Field>
+              <Field label="Carpet area" half><input type="number" onWheel={(e) => (e.target as HTMLInputElement).blur()} className="field" value={form.carpetArea ?? ''} onChange={(e) => set('carpetArea', e.target.value)} /></Field>
+              <Field label="Area unit" half>
+                <select className="field" value={form.areaUnit} onChange={(e) => set('areaUnit', e.target.value)}>
+                  {toOptions(AREA_UNITS).map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+                </select>
+              </Field>
+              <Field label="Bedrooms" half><input type="number" onWheel={(e) => (e.target as HTMLInputElement).blur()} className="field" value={form.bedrooms ?? ''} onChange={(e) => set('bedrooms', e.target.value)} /></Field>
+              <Field label="Bathrooms" half><input type="number" onWheel={(e) => (e.target as HTMLInputElement).blur()} className="field" value={form.bathrooms ?? ''} onChange={(e) => set('bathrooms', e.target.value)} /></Field>
+              <Field label="Covered parking" half><input type="number" onWheel={(e) => (e.target as HTMLInputElement).blur()} className="field" value={form.parkingCovered ?? ''} onChange={(e) => set('parkingCovered', e.target.value)} /></Field>
+              <Field label="Furnishing" half>
+                <select className="field" value={form.furnishing ?? ''} onChange={(e) => set('furnishing', e.target.value)}>
+                  <option value="">Not set</option>
+                  {toOptions(FURNISHINGS).map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+                </select>
+              </Field>
+              <Field label="Facing" half>
+                <select className="field" value={form.facing ?? ''} onChange={(e) => set('facing', e.target.value)}>
+                  <option value="">Not set</option>
+                  {toOptions(FACINGS).map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+                </select>
+              </Field>
+              <Field label="Frontage (ft)" half><input type="number" onWheel={(e) => (e.target as HTMLInputElement).blur()} className="field" value={form.frontageFeet ?? ''} onChange={(e) => set('frontageFeet', e.target.value)} /></Field>
+              <Field label="Road width (ft)" half><input type="number" onWheel={(e) => (e.target as HTMLInputElement).blur()} className="field" value={form.roadWidthFeet ?? ''} onChange={(e) => set('roadWidthFeet', e.target.value)} /></Field>
+              <Field label="Year built" half><input type="number" onWheel={(e) => (e.target as HTMLInputElement).blur()} className="field" value={form.constructionYear ?? ''} onChange={(e) => set('constructionYear', e.target.value)} /></Field>
+              <Field label="Features">
+                <div className="flex flex-wrap gap-2 rounded-[3px] border p-2">
+                  {AMENITY_OPTIONS.map((amenity) => {
+                    const list: string[] = form.amenities ?? [];
+                    return (
+                      <label key={amenity} className="flex items-center gap-1.5 text-sm">
+                        <input
+                          type="checkbox"
+                          checked={list.includes(amenity)}
+                          onChange={(e) => set('amenities', e.target.checked ? [...list, amenity] : list.filter((a) => a !== amenity))}
+                        />
+                        {amenity}
+                      </label>
+                    );
+                  })}
+                </div>
+              </Field>
+              <Field label="Suitable for (commercial)">
+                <div className="flex flex-wrap gap-2 rounded-[3px] border p-2">
+                  {BUSINESS_SUITABILITY.map((use) => {
+                    const list: string[] = form.suitableFor ?? [];
+                    return (
+                      <label key={use} className="flex items-center gap-1.5 text-sm">
+                        <input
+                          type="checkbox"
+                          checked={list.includes(use)}
+                          onChange={(e) => set('suitableFor', e.target.checked ? [...list, use] : list.filter((u) => u !== use))}
+                        />
+                        {use}
+                      </label>
+                    );
+                  })}
+                </div>
+              </Field>
+            </>
+          )}
+
+          {step === 3 && (
+            <>
+              <Field label="Asking price / monthly rent (₹)" half>
+                <input type="number" onWheel={(e) => (e.target as HTMLInputElement).blur()} className="field" value={listing.price ?? ''} onChange={(e) => setL('price', e.target.value)} />
+              </Field>
+              <Field label="Security deposit (₹)" half>
+                <input type="number" onWheel={(e) => (e.target as HTMLInputElement).blur()} className="field" value={listing.securityDeposit ?? ''} onChange={(e) => setL('securityDeposit', e.target.value)} />
+              </Field>
+              <Field label="Owner expectation (₹) — private" half>
+                <input type="number" onWheel={(e) => (e.target as HTMLInputElement).blur()} className="field" value={form.ownerExpectation ?? ''} onChange={(e) => set('ownerExpectation', e.target.value)} />
+              </Field>
+              <Field label="Minimum acceptable (₹) — private" half>
+                <input type="number" onWheel={(e) => (e.target as HTMLInputElement).blur()} className="field" value={form.minimumPrice ?? ''} onChange={(e) => set('minimumPrice', e.target.value)} />
+              </Field>
+              <Field label="Owner motivation — private" half>
+                <select className="field" value={form.motivation} onChange={(e) => set('motivation', e.target.value)}>
+                  {toOptions(MOTIVATIONS).map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+                </select>
+              </Field>
+              <Field label="Internal score (0-100) — private" half>
+                <input type="number" min={0} max={100} onWheel={(e) => (e.target as HTMLInputElement).blur()} className="field" value={form.internalScore ?? ''} onChange={(e) => set('internalScore', e.target.value)} />
+              </Field>
+              <Field label="Negotiation notes — private">
+                <textarea className="field" value={form.negotiationNote ?? ''} onChange={(e) => set('negotiationNote', e.target.value)} />
+              </Field>
+              {listing.price && form.minimumPrice && Number(form.minimumPrice) > Number(listing.price) && (
+                <p className="text-sm text-[var(--danger)] sm:col-span-2">
+                  The minimum ({inr(form.minimumPrice)}) is above the asking price ({inr(listing.price)}). Check the figures.
+                </p>
+              )}
+            </>
+          )}
+
+          {step === 4 && (
+            <>
+              <Field label="Owner record" half>
+                <select className="field" value={form.ownerId ?? ''} onChange={(e) => set('ownerId', e.target.value)}>
+                  <option value="">Not linked yet</option>
+                  {options('owners').map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+                </select>
+              </Field>
+              <Field label="Assigned to" half>
+                <select className="field" value={form.assignedToId ?? ''} onChange={(e) => set('assignedToId', e.target.value)}>
+                  <option value="">Me</option>
+                  {options('users').map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+                </select>
+              </Field>
+              <Field label="Source detail" half>
+                <input className="field" value={form.sourceDetail ?? ''} onChange={(e) => set('sourceDetail', e.target.value)} />
+              </Field>
+              <Field label="Private notes">
+                <textarea className="field" value={form.privateNotes ?? ''} onChange={(e) => set('privateNotes', e.target.value)} />
+              </Field>
+              <p className="text-xs text-[var(--muted)] sm:col-span-2">
+                Owners are managed on their own screen so one owner can hold several properties. Add the owner there first if they are not in this list.
+              </p>
+            </>
+          )}
+
+          {step === 5 && <PhotoUploader urls={photos} onChange={setPhotos} />}
+
+          {step === 6 && (
+            <>
+              <div className="sm:col-span-2 space-y-3">
+                {documents.map((document, index) => (
+                  <div key={index} className="grid gap-2 sm:grid-cols-3">
+                    <select
+                      className="field"
+                      value={document.kind}
+                      onChange={(e) => setDocuments((list) => list.map((d, i) => (i === index ? { ...d, kind: e.target.value } : d)))}
+                    >
+                      {['REGISTRY', 'SALE_DEED', 'KHASRA', 'B1', 'DIVERSION', 'TAX_RECEIPT', 'NOC', 'MAP', 'BUILDING_PERMISSION', 'OTHER'].map((kind) => (
+                        <option key={kind} value={kind}>{kind.replace(/_/g, ' ')}</option>
+                      ))}
+                    </select>
+                    <input
+                      className="field"
+                      placeholder="Title"
+                      value={document.title}
+                      onChange={(e) => setDocuments((list) => list.map((d, i) => (i === index ? { ...d, title: e.target.value } : d)))}
+                    />
+                    <input
+                      className="field"
+                      placeholder="Storage key or URL"
+                      value={document.storageKey}
+                      onChange={(e) => setDocuments((list) => list.map((d, i) => (i === index ? { ...d, storageKey: e.target.value } : d)))}
+                    />
+                  </div>
+                ))}
+                <button
+                  type="button"
+                  className="btn btn-ghost"
+                  onClick={() => setDocuments((list) => [...list, { kind: 'REGISTRY', title: '', storageKey: '' }])}
+                >
+                  Add a document
+                </button>
+                <p className="text-xs text-[var(--muted)]">
+                  Documents are private. They are served only through an authorised route that logs every access.
+                </p>
+              </div>
+            </>
+          )}
+
+          {step === 7 && (
+            <>
+              <Field label="List as" half>
+                <select className="field" value={listing.listingType} onChange={(e) => setL('listingType', e.target.value)}>
+                  {toOptions(LISTING_TYPES).map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+                </select>
+              </Field>
+              <Field label="Visibility" half>
+                <select className="field" value={listing.visibility} onChange={(e) => setL('visibility', e.target.value)}>
+                  {toOptions(VISIBILITIES).map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+                </select>
+              </Field>
+              <Field label="Public title">
+                <input className="field" value={listing.publicTitle ?? form.title ?? ''} onChange={(e) => setL('publicTitle', e.target.value)} />
+              </Field>
+              <Field label="Public description">
+                <textarea className="field min-h-[100px]" value={listing.publicDescription ?? form.summary ?? ''} onChange={(e) => setL('publicDescription', e.target.value)} />
+              </Field>
+              <Field label="Public locality (shown instead of the exact one)" half>
+                <select className="field" value={listing.publicLocationId ?? ''} onChange={(e) => setL('publicLocationId', e.target.value)}>
+                  <option value="">Same as the property</option>
+                  {options('locations').map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+                </select>
+              </Field>
+              <Field label="Price on request" half>
+                <label className="flex items-center gap-2 text-sm">
+                  <input type="checkbox" checked={!!listing.isPriceOnRequest} onChange={(e) => setL('isPriceOnRequest', e.target.checked)} />
+                  Hide the figure publicly
+                </label>
+              </Field>
+            </>
+          )}
+
+          {step === 8 && (
+            <div className="sm:col-span-2 space-y-3">
+              <p className="text-sm text-[var(--muted)]">
+                HN Verified is our own check, not a title guarantee. Tick only what has actually been done.
+              </p>
+              {[
+                ['ownerIdSeen', 'Owner identity seen'],
+                ['siteVisited', 'Property visited by our team'],
+                ['docsReceived', 'Ownership documents received'],
+                ['photosOurs', 'Photographs taken by us'],
+                ['availability', 'Availability confirmed with the owner'],
+              ].map(([key, text]) => (
+                <label key={key} className="flex items-center gap-2 text-sm">
+                  <input
+                    type="checkbox"
+                    checked={!!verification[key]}
+                    onChange={(e) => setVerification((current) => ({ ...current, [key]: e.target.checked }))}
+                  />
+                  {text}
+                </label>
+              ))}
+              {!can('property.verify') && (
+                <p className="text-xs text-[var(--muted)]">
+                  Your role cannot mark a property verified — a manager will complete this step.
+                </p>
+              )}
+            </div>
+          )}
+
+          {step === 9 && (
+            <div className="sm:col-span-2 space-y-4">
+              <div>
+                <p className="eyebrow">Summary</p>
+                <dl className="mt-2 grid gap-2 sm:grid-cols-2">
+                  {[
+                    ['Title', form.title],
+                    ['Price', listing.price ? inr(listing.price) : '—'],
+                    ['List as', listing.listingType],
+                    ['Visibility', listing.visibility],
+                    ['Photos', String(photos.length)],
+                    ['Documents', String(documents.length)],
+                  ].map(([key, value]) => (
+                    <div key={key as string} className="flex justify-between border-b pb-1.5 text-sm">
+                      <dt className="text-[var(--muted)]">{key}</dt>
+                      <dd className="font-medium">{value || '—'}</dd>
+                    </div>
+                  ))}
+                </dl>
+              </div>
+
+              <div className="flex flex-wrap gap-2">
+                <button type="button" className="btn btn-ghost" disabled={busy} onClick={() => finish('DRAFT')}>Save as draft</button>
+                {can('property.publish') && (
+                  <>
+                    <button type="button" className="btn btn-brass" disabled={busy} onClick={() => finish('COMING_SOON')}>Save as coming soon</button>
+                    <button type="button" className="btn btn-primary" disabled={busy} onClick={() => finish('PUBLISHED')}>Publish now</button>
+                  </>
+                )}
+              </div>
+              {publicId && <p className="mono text-sm">Public ID: {publicId}</p>}
+            </div>
+          )}
+        </div>
+
+        {duplicates.length > 0 && step === 1 && (
+          <div className="mt-5 rounded border border-[var(--brass)] bg-[var(--brass-soft)] p-4">
+            <p className="text-sm font-medium">Possible duplicates already on file</p>
+            <ul className="mt-2 space-y-1 text-sm">
+              {duplicates.slice(0, 5).map((duplicate) => (
+                <li key={duplicate.id} className="mono text-xs">
+                  {duplicate.code} — {duplicate.title} ({duplicate.location?.name})
+                </li>
+              ))}
+            </ul>
+            <p className="mt-2 text-xs text-[var(--muted)]">Continue if this is genuinely a different property.</p>
+          </div>
+        )}
+
+        {error && <p className="mt-4 text-sm text-[var(--danger)]">{error}</p>}
+
+        <div className="mt-6 flex items-center justify-between border-t pt-4">
+          <button type="button" className="btn btn-ghost" disabled={step === 0} onClick={() => setStep((s) => s - 1)}>Back</button>
+          <p className="mono text-xs text-[var(--muted)]">Step {step + 1} of {STEPS.length}</p>
+          {step < STEPS.length - 1 ? (
+            <button type="button" className="btn btn-primary" disabled={busy} onClick={next}>
+              {busy ? 'Saving…' : 'Continue'}
+            </button>
+          ) : (
+            <span />
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
