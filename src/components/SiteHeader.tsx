@@ -17,8 +17,10 @@ const NAV = [
   { href: '/', label: 'Home' },
   { href: '/buy', label: 'Buy' },
   { href: '/rent', label: 'Rent' },
-  { href: '/sell', label: 'Sell' },
-  { href: '/give-on-rent', label: 'Give on Rent' },
+  // menuOnly: kept out of the desktop bar for room, but still in the mobile menu
+  // and the footer. The "Post Your Property" button covers both journeys anyway.
+  { href: '/sell', label: 'Sell', menuOnly: true },
+  { href: '/give-on-rent', label: 'Give on Rent', menuOnly: true },
   { href: '/hot-deals', label: '🔥 Hot Deals', accent: 'fire' as const },
   { href: '/wanted', label: '🥇 Property Demand', accent: 'gold' as const },
   { href: '/requirement', label: 'Requirements' },
@@ -40,7 +42,7 @@ export default function SiteHeader() {
       <div className="wrap flex h-[68px] items-center justify-between gap-4">
         {/* whitespace-nowrap throughout: at narrower widths the labels were breaking
             across three lines and pushing the whole header out of shape. */}
-        <Link href="/" className="group flex shrink-0 items-center gap-3">
+        <Link href="/" className="group flex min-w-0 shrink items-center gap-3">
           <Image
             src="/logo.png"
             alt=""
@@ -49,21 +51,24 @@ export default function SiteHeader() {
             className="h-11 w-11 shrink-0 object-contain transition-transform duration-500 group-hover:scale-105"
             priority
           />
-          <span className="leading-tight">
+          {/* min-w-0 + truncate on the tagline: if the nav ever needs more room,
+              this line shortens instead of the nav overflowing into the buttons
+              on the right, which is what caused the overlap before. */}
+          <span className="min-w-0 leading-tight">
             <span className="display block whitespace-nowrap text-xl text-[var(--navy)]">HN PROPERTIES</span>
-            <span className="block whitespace-nowrap text-sm text-[var(--muted)]">{site.city} Property Marketplace</span>
+            <span className="block truncate text-sm text-[var(--muted)]">{site.city} Property Marketplace</span>
           </span>
         </Link>
 
-        <nav className="hidden min-w-0 flex-1 items-center justify-center gap-1.5 xl:flex 2xl:gap-3">
-          {NAV.map((item) => {
+        <nav className="hidden min-w-0 flex-1 items-center justify-center gap-1 2xl:flex 2xl:gap-2">
+          {NAV.filter((item) => !item.menuOnly).map((item) => {
             const active = item.href === '/' ? pathname === '/' : pathname.startsWith(item.href);
             const accent = item.accent ? ACCENT_CLASS[item.accent] : null;
             return (
               <Link
                 key={item.href}
                 href={item.href}
-                className={`whitespace-nowrap rounded-lg px-4 py-2.5 text-base font-medium transition duration-300 2xl:px-5 ${
+                className={`whitespace-nowrap rounded-lg px-3 py-2 text-sm font-medium transition duration-300 ${
                   accent
                     ? `${accent} ${active ? 'ring-2 ring-[var(--navy)] ring-offset-1' : ''}`
                     : active
@@ -116,7 +121,7 @@ export default function SiteHeader() {
 
           <button
             type="button"
-            className="btn btn-ghost xl:hidden"
+            className="btn btn-ghost 2xl:hidden"
             onClick={() => setOpen((v) => !v)}
             aria-expanded={open}
             aria-controls="site-menu"
@@ -127,7 +132,7 @@ export default function SiteHeader() {
       </div>
 
       {open && (
-        <nav id="site-menu" className="animate-rise border-t bg-white xl:hidden">
+        <nav id="site-menu" className="animate-rise border-t bg-white 2xl:hidden">
           <div className="wrap grid grid-cols-2 gap-1 py-3">
             {NAV.map((item) => (
               <Link

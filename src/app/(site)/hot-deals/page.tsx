@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
+import Image from 'next/image';
 import { getHotDeals } from '@/lib/public-data';
 import PropertyCard from '@/components/PropertyCard';
 import { site } from '@/lib/constants';
@@ -17,12 +18,27 @@ export default async function HotDealsPage() {
 
   return (
     <div className="wrap py-12">
-      <p className="eyebrow">Hot deals</p>
-      <h1 className="display mt-2 text-3xl text-[var(--navy)]">🔥 Deals worth moving on</h1>
-      <p className="mt-3 max-w-3xl text-[var(--muted)]">
-        Properties our team has picked out as sharply priced, urgent, or unusually well suited to the right
-        buyer. These change often — if something here fits, call {site.phone} before it goes.
-      </p>
+      {/*
+        The artwork carries the heading visually, but search engines and screen
+        readers still need real text — hence the sr-only h1 alongside it. The
+        image is decorative (alt="") because the h1 already says the same thing;
+        announcing it twice would be worse, not better.
+      */}
+      <div className="flex flex-col items-center text-center">
+        <h1 className="sr-only">Hot deals on property in {site.city}</h1>
+        <Image
+          src="/hot-deals-banner.png"
+          alt=""
+          width={1000}
+          height={563}
+          priority
+          className="h-auto w-full max-w-[300px] sm:max-w-[420px] lg:max-w-[520px]"
+        />
+        <p className="mt-2 max-w-3xl text-lg text-[var(--muted)]">
+          Properties our team has picked out as sharply priced, urgent, or unusually well suited to the right
+          buyer. These change often — if something here fits, call {site.phone} before it goes.
+        </p>
+      </div>
 
       {deals.length === 0 ? (
         <div className="plate mt-10 p-12 text-center">
