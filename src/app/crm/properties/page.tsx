@@ -106,7 +106,7 @@ export default async function PropertiesPage({ searchParams }: { searchParams: S
         assignedTo: { select: { name: true } },
         media: { take: 1, orderBy: { sortOrder: 'asc' }, select: { url: true, thumbUrl: true } },
         listings: {
-          select: { id: true, publicId: true, listingType: true, status: true, price: true },
+          select: { id: true, publicId: true, listingType: true, status: true, price: true, isHotDeal: true },
           orderBy: { createdAt: 'asc' },
         },
       },

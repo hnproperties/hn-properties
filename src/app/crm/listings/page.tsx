@@ -19,6 +19,7 @@ export default function ListingsPage() {
           { key: 'price', label: 'Price', type: 'money' },
           { key: 'status', label: 'Status', type: 'badge' },
           { key: 'visibility', label: 'Visibility', type: 'badge' },
+          { key: 'isHotDeal', label: '🔥', type: 'bool' },
           { key: '_count.leads', label: 'Leads' },
           { key: 'viewCount', label: 'Views' },
         ]}
@@ -26,6 +27,7 @@ export default function ListingsPage() {
           { name: 'status', label: 'Status', options: toOptions(LISTING_STATUSES) },
           { name: 'visibility', label: 'Visibility', options: toOptions(VISIBILITIES) },
           { name: 'listingType', label: 'For', options: toOptions(LISTING_TYPES) },
+          { name: 'isHotDeal', label: 'Hot deal', options: [{ value: 'true', label: '🔥 Hot deals only' }] },
         ]}
         fields={[
           { name: 'propertyId', label: 'Property', type: 'lookup', lookup: 'properties', required: true, half: true },
@@ -44,6 +46,9 @@ export default function ListingsPage() {
           { name: 'status', label: 'Status', type: 'select', options: toOptions(LISTING_STATUSES), half: true },
           { name: 'visibility', label: 'Visibility', type: 'select', options: toOptions(VISIBILITIES), half: true },
           { name: 'isFeatured', label: 'Featured', type: 'checkbox', hint: 'Show on the home page', half: true },
+          { name: 'isHotDeal', label: '🔥 Hot Deal', type: 'checkbox', hint: 'Show on the Hot Deals page with a badge', half: true },
+          { name: 'hotDealNote', label: 'Hot deal pitch', hint: 'One short line, e.g. "Below circle rate — owner relocating"', half: true },
+          { name: 'hotDealUntil', label: 'Hot deal ends on', type: 'date', hint: 'Optional — it drops off the shelf by itself', half: true },
           { name: 'assignedToId', label: 'Assigned to', type: 'lookup', lookup: 'users', half: true },
           { name: 'expiresAt', label: 'Expires on', type: 'date', half: true },
           { name: 'nextCheckAt', label: 'Next availability check', type: 'date', half: true },

@@ -33,12 +33,14 @@ const NAV: { href: string; label: string; icon: string; needs?: string[]; group:
   { href: '/crm/review', label: 'Review Queue', icon: '📋', group: 'Inventory', needs: ['property.view', 'property.view.all'] },
   { href: '/crm/properties', label: 'Properties', icon: '🏘️', group: 'Inventory', needs: ['property.view', 'property.view.all'] },
   { href: '/crm/listings', label: 'Listings', icon: '🏷️', group: 'Inventory', needs: ['property.view', 'property.view.all'] },
+  { href: '/crm/hot-deals', label: 'Hot Deals', icon: '🔥', group: 'Inventory', needs: ['property.view', 'property.view.all'] },
   { href: '/crm/owners', label: 'Owners', icon: '👤', group: 'Inventory', needs: ['owner.view', 'owner.view.all'] },
   { href: '/crm/documents', label: 'Documents', icon: '📁', group: 'Inventory', needs: ['property.document.view'] },
 
   { href: '/crm/leads', label: 'Leads', icon: '🎯', group: 'Demand', needs: ['lead.view', 'lead.view.all'] },
   { href: '/crm/clients', label: 'Clients', icon: '👥', group: 'Demand', needs: ['client.view', 'client.view.all'] },
   { href: '/crm/requirements', label: 'Requirements', icon: '📝', group: 'Demand', needs: ['requirement.view', 'requirement.view.all'] },
+  { href: '/crm/property-demand', label: 'Property Demand', icon: '🥇', group: 'Demand', needs: ['requirement.view', 'requirement.view.all'] },
 
   { href: '/crm/deals', label: 'Deals', icon: '🤝', group: 'Transaction', needs: ['deal.view', 'deal.view.all'] },
 

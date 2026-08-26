@@ -7,17 +7,29 @@ import { useState } from 'react';
 import { site, waLink } from '@/lib/constants';
 import { InstagramIcon, WhatsAppIcon, PhoneIcon } from './SocialIcons';
 
+/**
+ * `accent` marks the two shelves we want people to notice: Property Demand
+ * (buyers already looking) and Hot Deals. They render as solid coloured buttons
+ * in every state rather than plain text links, so they read as calls to action
+ * instead of ordinary navigation.
+ */
 const NAV = [
   { href: '/', label: 'Home' },
   { href: '/buy', label: 'Buy' },
   { href: '/rent', label: 'Rent' },
   { href: '/sell', label: 'Sell' },
   { href: '/give-on-rent', label: 'Give on Rent' },
-  { href: '/wanted', label: 'Wanted' },
+  { href: '/hot-deals', label: '🔥 Hot Deals', accent: 'fire' as const },
+  { href: '/wanted', label: '🥇 Property Demand', accent: 'gold' as const },
   { href: '/requirement', label: 'Requirements' },
   { href: '/about', label: 'About' },
   { href: '/contact', label: 'Contact' },
 ];
+
+const ACCENT_CLASS = {
+  fire: 'bg-gradient-to-r from-[#e8590c] to-[#f08c00] text-white shadow-[0_4px_14px_-4px_rgba(232,89,12,0.65)] hover:-translate-y-0.5 hover:shadow-[0_6px_18px_-4px_rgba(232,89,12,0.75)]',
+  gold: 'bg-gradient-to-r from-[#b8860b] to-[#d4a017] text-white shadow-[0_4px_14px_-4px_rgba(184,134,11,0.6)] hover:-translate-y-0.5 hover:shadow-[0_6px_18px_-4px_rgba(184,134,11,0.7)]',
+} as const;
 
 export default function SiteHeader() {
   const [open, setOpen] = useState(false);
@@ -46,14 +58,17 @@ export default function SiteHeader() {
         <nav className="hidden min-w-0 flex-1 items-center justify-center gap-1.5 xl:flex 2xl:gap-3">
           {NAV.map((item) => {
             const active = item.href === '/' ? pathname === '/' : pathname.startsWith(item.href);
+            const accent = item.accent ? ACCENT_CLASS[item.accent] : null;
             return (
               <Link
                 key={item.href}
                 href={item.href}
                 className={`whitespace-nowrap rounded-lg px-4 py-2.5 text-base font-medium transition duration-300 2xl:px-5 ${
-                  active
-                    ? 'bg-[var(--brand)] text-white shadow-[0_4px_14px_-4px_rgba(21,131,181,0.6)]'
-                    : 'text-[var(--ink-soft)] hover:-translate-y-0.5 hover:bg-[var(--brand-soft)] hover:text-[var(--brand)]'
+                  accent
+                    ? `${accent} ${active ? 'ring-2 ring-[var(--navy)] ring-offset-1' : ''}`
+                    : active
+                      ? 'bg-[var(--brand)] text-white shadow-[0_4px_14px_-4px_rgba(21,131,181,0.6)]'
+                      : 'text-[var(--ink-soft)] hover:-translate-y-0.5 hover:bg-[var(--brand-soft)] hover:text-[var(--brand)]'
                 }`}
               >
                 {item.label}
@@ -115,7 +130,16 @@ export default function SiteHeader() {
         <nav id="site-menu" className="animate-rise border-t bg-white xl:hidden">
           <div className="wrap grid grid-cols-2 gap-1 py-3">
             {NAV.map((item) => (
-              <Link key={item.href} href={item.href} onClick={() => setOpen(false)} className="rounded-lg px-3 py-3 hover:bg-[var(--brand-soft)]">
+              <Link
+                key={item.href}
+                href={item.href}
+                onClick={() => setOpen(false)}
+                className={
+                  item.accent
+                    ? `col-span-2 rounded-lg px-3 py-3 text-center font-semibold ${ACCENT_CLASS[item.accent]}`
+                    : 'rounded-lg px-3 py-3 hover:bg-[var(--brand-soft)]'
+                }
+              >
                 {item.label}
               </Link>
             ))}

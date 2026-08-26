@@ -149,7 +149,7 @@ export const listingResource: ResourceDef = {
   model: 'listing',
   label: 'Listing',
   searchFields: ['publicId', 'publicTitle'],
-  filterFields: ['status', 'visibility', 'listingType', 'assignedToId', 'isFeatured', 'propertyId'],
+  filterFields: ['status', 'visibility', 'listingType', 'assignedToId', 'isFeatured', 'isHotDeal', 'propertyId'],
   defaultOrder: { createdAt: 'desc' },
   listInclude: {
     property: {
@@ -201,6 +201,9 @@ export const listingResource: ResourceDef = {
     if (next.status !== undefined) next.status = gateStatus(next.status, user);
     if (next.visibility !== undefined && next.visibility === 'PUBLIC' && !can(user, 'property.publish')) throw forbidden();
     if (next.isFeatured !== undefined && !can(user, 'property.publish')) throw forbidden();
+    // Marking a hot deal puts a listing on a public shelf, so it needs the same
+    // permission as publishing or featuring — not merely edit access.
+    if (next.isHotDeal !== undefined && !can(user, 'property.publish')) throw forbidden();
     if (next.price !== undefined && Number(existing.price ?? 0) !== Number(next.price)) {
       await prisma.priceHistory.create({
         data: {

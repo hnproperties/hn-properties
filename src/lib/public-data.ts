@@ -44,6 +44,34 @@ export async function getFeatured(take = 6) {
   }
 }
 
+/**
+ * The Hot Deals shelf. Separate from getFeatured: featured drives the home page,
+ * hot deals are the loud, time-boxed offers with their own page and badge.
+ *
+ * hotDealUntil is optional — a deal with no date runs until someone unticks it.
+ * One with a date drops off on its own once it passes, so the shelf cannot go
+ * stale through forgetfulness. Both cases are covered by the OR below.
+ */
+export async function getHotDeals(take = 24) {
+  try {
+    return plain(
+      await prisma.listing.findMany({
+        where: {
+          ...PUBLIC_LISTING_WHERE,
+          isHotDeal: true,
+          OR: [{ hotDealUntil: null }, { hotDealUntil: { gte: new Date() } }],
+        },
+        select: PUBLIC_LISTING_SELECT,
+        orderBy: [{ publishedAt: 'desc' }],
+        take,
+      }),
+    ) as any[];
+  } catch (error) {
+    console.error('[public] hot deals query failed', error);
+    return [];
+  }
+}
+
 export async function getRecent(take = 6) {
   try {
     return plain(

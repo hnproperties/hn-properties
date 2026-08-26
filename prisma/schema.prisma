@@ -357,6 +357,14 @@ model Listing {
   visibility  Visibility    @default(PRIVATE)
   isFeatured  Boolean       @default(false)
 
+  // Hot Deals — a separate, louder shelf from isFeatured (which drives the home
+  // page). A listing can be one, the other, or both. hotDealNote is the short
+  // pitch shown on the card; hotDealUntil lets a deal retire on its own so the
+  // shelf does not go stale when nobody remembers to clear it.
+  isHotDeal    Boolean   @default(false)
+  hotDealNote  String?
+  hotDealUntil DateTime?
+
   // public commercials
   price            Decimal? @db.Decimal(14, 2) // sale price or monthly rent
   pricePerUnit     Decimal? @db.Decimal(12, 2)
@@ -407,6 +415,7 @@ model Listing {
   @@index([status, visibility, listingType])
   @@index([publicLocationId, price])
   @@index([publishedAt])
+  @@index([isHotDeal, hotDealUntil])
 }
 
 model PropertyMedia {

@@ -10,7 +10,7 @@ export type Option = { value: string; label: string };
 export type Column = {
   key: string; // dotted path, e.g. 'client.name'
   label: string;
-  type?: 'text' | 'money' | 'date' | 'datetime' | 'badge' | 'mono' | 'count';
+  type?: 'text' | 'money' | 'date' | 'datetime' | 'badge' | 'mono' | 'count' | 'bool';
 };
 
 export type FieldDef = {
@@ -55,6 +55,10 @@ function renderCell(row: any, column: Column) {
       return <span className="badge">{labelOf(String(value))}</span>;
     case 'mono':
       return <span className="mono text-xs">{String(value)}</span>;
+    case 'bool':
+      // A false boolean is a real value, not a blank, so it never reaches the
+      // empty check above — render it as a dash rather than the word "false".
+      return value ? <span aria-label="yes">✓</span> : <span className="text-[var(--muted)]">—</span>;
     default:
       return String(value);
   }

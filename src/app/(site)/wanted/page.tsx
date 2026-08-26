@@ -7,8 +7,8 @@ import { label, site, waLink } from '@/lib/constants';
 export const revalidate = 300;
 
 export const metadata: Metadata = {
-  title: `Property wanted in ${site.city}`,
-  description: `Buyers and tenants currently looking through ${site.name}. If you own something that fits, get in touch — we already have the client.`,
+  title: `Property demand in ${site.city}`,
+  description: `Live demand from buyers, tenants and companies on our books at ${site.name}. If you own something that fits, get in touch — we already have the client.`,
   alternates: { canonical: '/wanted' },
 };
 
@@ -17,16 +17,16 @@ export default async function WantedPage() {
 
   return (
     <div className="wrap py-12">
-      <p className="eyebrow">Property wanted</p>
-      <h1 className="display mt-2 text-3xl text-[var(--navy)]">Buyers and tenants looking right now</h1>
+      <p className="eyebrow">🥇 Property Demand</p>
+      <h1 className="display mt-2 text-3xl text-[var(--navy)]">What buyers, tenants and companies are asking for</h1>
       <p className="mt-3 max-w-3xl text-[var(--muted)]">
-        These are live requirements from clients on our books. If you own something that fits, tell us —
+        These are live requirements from individuals, companies and corporate clients on our books. If you own something that fits, tell us —
         the buyer or tenant already exists, which usually means a faster, quieter sale than putting it on the open market.
       </p>
 
       {requirements.length === 0 ? (
         <div className="plate mt-10 p-12 text-center">
-          <p className="display text-lg text-[var(--navy)]">No open requirements listed at the moment</p>
+          <p className="display text-lg text-[var(--navy)]">No open demand listed at the moment</p>
           <p className="mx-auto mt-2 max-w-md text-[var(--muted)]">
             We match most requirements privately. Call {site.phone} and we will tell you what our clients are asking for.
           </p>

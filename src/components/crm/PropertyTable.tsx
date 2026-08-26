@@ -133,6 +133,32 @@ export default function PropertyTable({
     router.refresh();
   }
 
+  /**
+   * One-click hot-deal toggle straight from the inventory list. The flag lives on
+   * the listing, not the property, because price and public visibility do — a
+   * property with both a sale and a rent listing can be a deal on one and not the
+   * other. This toggles the listing shown in this row.
+   */
+  async function toggleHotDeal(listingId: string, next: boolean) {
+    setWorking(listingId);
+    setMessage(null);
+
+    const response = await fetch(`/api/listings/${listingId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ isHotDeal: next }),
+    });
+
+    setWorking(null);
+    if (!response.ok) {
+      const payload = await response.json().catch(() => ({}));
+      setMessage(payload.error ?? 'Could not change that');
+      return;
+    }
+    setMessage(next ? 'Added to Hot Deals' : 'Removed from Hot Deals');
+    router.refresh();
+  }
+
   return (
     <div className="space-y-4">
       {/* Tabs */}
@@ -402,6 +428,23 @@ export default function PropertyTable({
                   </td>
                   <td className="px-4 py-3 text-right" onClick={(e) => e.stopPropagation()}>
                     <div className="flex items-center justify-end gap-2">
+                      {listing && (
+                        <button
+                          type="button"
+                          aria-pressed={!!listing.isHotDeal}
+                          title={listing.isHotDeal ? 'Remove from Hot Deals' : 'Mark as a Hot Deal'}
+                          disabled={working === listing.id}
+                          onClick={() => toggleHotDeal(listing.id, !listing.isHotDeal)}
+                          className={`rounded-lg border px-2 py-1.5 text-xs font-semibold transition disabled:opacity-50 ${
+                            listing.isHotDeal
+                              ? 'border-[#e8590c] bg-[#fff4e6] text-[#c2410c]'
+                              : 'border-[var(--line)] text-[var(--muted)] hover:border-[#e8590c] hover:text-[#c2410c]'
+                          }`}
+                        >
+                          🔥
+                        </button>
+                      )}
+
                       {listing && (
                         <select
                           aria-label="Change status"
