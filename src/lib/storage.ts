@@ -68,3 +68,48 @@ export async function signedUrl(key: string, _seconds = 60): Promise<string> {
   if (driver === 'local') return key;
   throw new Error('No storage driver configured.');
 }
+
+/**
+ * Read a private document's bytes on the server.
+ *
+ * This exists so /api/documents/[id] can stream the file to an authorised user
+ * rather than redirecting them to the underlying storage URL. The distinction
+ * matters: the Blob SDK only supports `access: 'public'`, so a document's real
+ * URL is readable by anyone who ever obtains it — and a redirect hands that URL
+ * to the browser, where it lands in history, referrer headers and proxy logs.
+ * Streaming keeps the storage location server-side, so the only way to read a
+ * document is through the route that checks permissions and writes an audit row.
+ *
+ * Note this does not make the underlying blob private; it stops the URL leaking.
+ * Any document uploaded before this change still has a live public URL, so treat
+ * rotation of genuinely sensitive files as a separate job.
+ */
+export async function readPrivate(key: string): Promise<{ body: Buffer; contentType: string | null }> {
+  if (driver === 'vercel-blob') {
+    // Legacy rows store the full blob URL in storageKey; newer ones may store a pathname.
+    const url = key.startsWith('http') ? key : `${process.env.BLOB_PUBLIC_BASE_URL ?? ''}/${key}`;
+    if (!url.startsWith('http')) throw new Error('Cannot resolve document location');
+
+    const response = await fetch(url, { cache: 'no-store' });
+    if (!response.ok) throw new Error(`Storage read failed (${response.status})`);
+    return {
+      body: Buffer.from(await response.arrayBuffer()),
+      contentType: response.headers.get('content-type'),
+    };
+  }
+
+  if (driver === 'local') {
+    const { readFile } = await import('fs/promises');
+    // storageKey is an absolute path written by uploadPrivate. Confirm it still
+    // resolves inside the private directory before reading it, so a tampered
+    // database row cannot be used to read arbitrary files off the server.
+    const root = path.resolve(process.cwd(), 'private-uploads');
+    const resolved = path.resolve(key);
+    if (resolved !== root && !resolved.startsWith(root + path.sep)) {
+      throw new Error('Document path is outside the private directory');
+    }
+    return { body: await readFile(resolved), contentType: null };
+  }
+
+  throw new Error('No storage driver configured.');
+}
