@@ -89,7 +89,7 @@ export default function SiteHeader() {
               this line shortens instead of the nav overflowing into the buttons
               on the right, which is what caused the overlap before. */}
           <span className="min-w-0 leading-tight">
-            <span className="display block whitespace-nowrap text-[22px] text-[var(--navy)]">HN PROPERTIES</span>
+            <span className="display block whitespace-nowrap text-[19px] text-[var(--navy)]">HN PROPERTIES</span>
             <span className="block truncate text-sm text-[var(--muted)] xl:hidden 2xl:block">{site.city} Property Marketplace</span>
           </span>
         </Link>
