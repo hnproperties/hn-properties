@@ -166,7 +166,7 @@ export default function HeroSearch({ locations }: { categories?: Option[]; locat
               setMode(option);
               setBudget('');
             }}
-            className={`px-7 py-4 text-base font-semibold transition ${
+            className={`flex-1 px-2 py-4 text-center text-base font-semibold transition lg:flex-none lg:px-7 lg:text-left ${
               mode === option
                 ? 'border-b-2 border-[var(--brand)] text-[var(--brand)]'
                 : 'text-[var(--muted)] hover:text-[var(--ink)]'
