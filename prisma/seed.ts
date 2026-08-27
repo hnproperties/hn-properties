@@ -123,18 +123,13 @@ async function seedLocations() {
 }
 
 const CATEGORIES: { segment: 'RESIDENTIAL' | 'COMMERCIAL' | 'LAND'; name: string; flags?: Record<string, boolean> }[] = [
-  { segment: 'RESIDENTIAL', name: 'Flat', flags: { hasBedrooms: true, hasFurnishing: true } },
-  { segment: 'RESIDENTIAL', name: 'Apartment', flags: { hasBedrooms: true, hasFurnishing: true } },
-  { segment: 'RESIDENTIAL', name: 'House', flags: { hasBedrooms: true, hasFurnishing: true } },
-  { segment: 'RESIDENTIAL', name: 'Villa', flags: { hasBedrooms: true, hasFurnishing: true } },
-  { segment: 'RESIDENTIAL', name: 'Bungalow', flags: { hasBedrooms: true } },
-  { segment: 'RESIDENTIAL', name: 'Duplex', flags: { hasBedrooms: true } },
+  { segment: 'RESIDENTIAL', name: 'Flat/Apartment', flags: { hasBedrooms: true, hasFurnishing: true } },
+  { segment: 'RESIDENTIAL', name: 'House/Villa', flags: { hasBedrooms: true, hasFurnishing: true } },
   { segment: 'RESIDENTIAL', name: 'Builder Floor', flags: { hasBedrooms: true, hasFurnishing: true } },
   { segment: 'RESIDENTIAL', name: 'Farmhouse', flags: { hasBedrooms: true } },
   { segment: 'RESIDENTIAL', name: 'Residential Plot', flags: { isLand: true } },
-  { segment: 'COMMERCIAL', name: 'Shop', flags: { hasFrontage: true } },
-  { segment: 'COMMERCIAL', name: 'Showroom', flags: { hasFrontage: true } },
-  { segment: 'COMMERCIAL', name: 'Office', flags: { hasFurnishing: true } },
+  { segment: 'COMMERCIAL', name: 'Commercial Shop/Showroom', flags: { hasFrontage: true } },
+  { segment: 'COMMERCIAL', name: 'Office Space', flags: { hasFurnishing: true } },
   { segment: 'COMMERCIAL', name: 'Commercial Building', flags: {} },
   { segment: 'COMMERCIAL', name: 'Warehouse', flags: {} },
   { segment: 'COMMERCIAL', name: 'Godown', flags: {} },
@@ -273,7 +268,7 @@ type Spec = {
 
 const SPECS: Spec[] = [
   {
-    code: 'A', title: '3BHK flat in Napier Town', category: 'Flat', area: 'Napier Town', listingType: 'SALE',
+    code: 'A', title: '3BHK flat in Napier Town', category: 'Flat/Apartment', area: 'Napier Town', listingType: 'SALE',
     price: 8_200_000, minimumPrice: 7_800_000, bedrooms: 3, bathrooms: 2, builtUpArea: 1450, ownerIndex: 0,
     summary: 'Third-floor flat in a lift-equipped building, close to the main market and schools. Covered parking, borewell and municipal water.',
     amenities: ['Lift', 'Covered parking', 'Borewell', 'Municipal water', 'Security'], featured: true, verified: true,
@@ -285,7 +280,7 @@ const SPECS: Spec[] = [
     amenities: ['Corner plot', 'Boundary wall', 'Wide road'], verified: true,
   },
   {
-    code: 'C', title: 'Shop on the main road, Wright Town', category: 'Shop', area: 'Wright Town', listingType: 'RENT',
+    code: 'C', title: 'Shop on the main road, Wright Town', category: 'Commercial Shop/Showroom', area: 'Wright Town', listingType: 'RENT',
     price: 45_000, deposit: 270_000, builtUpArea: 520, ownerIndex: 2,
     summary: 'Ground-floor shop with 18ft frontage on a busy stretch. Suitable for retail, a clinic or a bank branch.',
     amenities: ['Three-phase power', 'Wide road'], featured: true,
@@ -303,19 +298,19 @@ const SPECS: Spec[] = [
     amenities: ['Borewell'],
   },
   {
-    code: 'F', title: '4BHK house in Katanga', category: 'House', area: 'Katanga', listingType: 'SALE',
+    code: 'F', title: '4BHK house in Katanga', category: 'House/Villa', area: 'Katanga', listingType: 'SALE',
     price: 12_500_000, minimumPrice: 11_800_000, bedrooms: 4, bathrooms: 3, builtUpArea: 2100, plotArea: 1800, ownerIndex: 2,
     summary: 'Independent house on an 1800 sq.ft plot with a small garden, covered parking for two cars and a pooja room.',
     amenities: ['Garden', 'Covered parking', 'Pooja room', 'Store room', 'Borewell'], featured: true, verified: true,
   },
   {
-    code: 'G', title: 'Office space in Madan Mahal', category: 'Office', area: 'Madan Mahal', listingType: 'RENT',
+    code: 'G', title: 'Office space in Madan Mahal', category: 'Office Space', area: 'Madan Mahal', listingType: 'RENT',
     price: 32_000, deposit: 192_000, builtUpArea: 1100, ownerIndex: 0,
     summary: 'Second-floor office with a cabin layout, lift access and dedicated parking. Suitable for a professional practice.',
     amenities: ['Lift', 'Power backup', 'CCTV'],
   },
   {
-    code: 'H', title: 'Villa in Tilhari', category: 'Villa', area: 'Tilhari', listingType: 'SALE',
+    code: 'H', title: 'Villa in Tilhari', category: 'House/Villa', area: 'Tilhari', listingType: 'SALE',
     price: 21_000_000, minimumPrice: 19_500_000, bedrooms: 4, bathrooms: 4, builtUpArea: 3200, plotArea: 4000,
     status: 'COMING_SOON', ownerIndex: 1,
     summary: 'Gated-society villa with a lawn, servant quarter and a double-height living room. Full details to follow.',
@@ -328,7 +323,7 @@ const SPECS: Spec[] = [
     amenities: ['Loading bay', 'Three-phase power', 'Boundary wall'],
   },
   {
-    code: 'J', title: '2BHK flat in Ranjhi', category: 'Flat', area: 'Ranjhi', listingType: 'SALE',
+    code: 'J', title: '2BHK flat in Ranjhi', category: 'Flat/Apartment', area: 'Ranjhi', listingType: 'SALE',
     price: 4_100_000, bedrooms: 2, bathrooms: 2, builtUpArea: 880, status: 'UNDER_VERIFICATION', visibility: 'PRIVATE', ownerIndex: 0,
     summary: 'Owner submission awaiting document check and a site visit.',
   },
@@ -376,7 +371,7 @@ async function seedInventory(
         areaUnit: spec.areaUnit ?? 'SQFT',
         furnishing: spec.bedrooms ? 'SEMI_FURNISHED' : undefined,
         facing: 'EAST',
-        isMainRoad: spec.category === 'Shop',
+        isMainRoad: spec.category === 'Commercial Shop/Showroom',
         isReadyToMove: !!spec.builtUpArea,
         amenities: spec.amenities ?? [],
         minimumPrice: spec.minimumPrice,
@@ -467,7 +462,7 @@ async function seedInventory(
       code: 'REQ-0001', clientId: client.id, listingType: 'SALE',
       budgetMin: 7_000_000, budgetMax: 9_000_000, areaMin: 1200, bedroomsMin: 3,
       purpose: 'Self use', timeline: 'Within 3 months', assignedToId: staff.sales.id,
-      categories: { create: [{ categoryId: categories['Flat'] }, { categoryId: categories['House'] }] },
+      categories: { create: [{ categoryId: categories['Flat/Apartment'] }, { categoryId: categories['House/Villa'] }] },
       locations: { create: [{ locationId: locations.areas['Napier Town'] }, { locationId: locations.areas['Katanga'] }] },
     },
   });
@@ -476,7 +471,7 @@ async function seedInventory(
     data: {
       code: 'REQ-0002', clientId: tenant.id, listingType: 'RENT', budgetMax: 20_000, bedroomsMin: 2,
       purpose: 'Family accommodation', assignedToId: staff.sales.id,
-      categories: { create: [{ categoryId: categories['Builder Floor'] }, { categoryId: categories['Flat'] }] },
+      categories: { create: [{ categoryId: categories['Builder Floor'] }, { categoryId: categories['Flat/Apartment'] }] },
       locations: { create: [{ locationId: locations.areas['Gorakhpur'] }] },
     },
   });
