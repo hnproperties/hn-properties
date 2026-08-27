@@ -7,6 +7,21 @@ const AREA_UNIT_OPTIONS = toOptions(AREA_UNITS);
 const FACING_OPTIONS = toOptions(FACINGS);
 const FURNISHING_OPTIONS = toOptions(FURNISHINGS);
 
+/** Short labels for phones, full ones for laptops — same four steps either way. */
+const SHORT_STEPS = [
+  ['Share', 'Property details.'],
+  ['Visit', 'We inspect and value.'],
+  ['List', 'We market it.'],
+  ['Sell', 'We handle the deal.'],
+];
+
+const FULL_STEPS = [
+  ['You share the details', 'The form below takes two minutes. Documents are not needed yet.'],
+  ['We call and visit', 'We see the property, discuss pricing and check the ownership papers.'],
+  ['We list and market it', 'Photographs, website listing, WhatsApp circulation and our buyer database.'],
+  ['We handle the process', 'Site visits, negotiation, token, agreement and registration.'],
+];
+
 
 export const metadata: Metadata = {
   title: `Sell your property in ${site.city}`,
@@ -22,22 +37,26 @@ export default async function SellPage() {
       <div>
         <p className="eyebrow">Owners</p>
         <h1 className="display mt-2 text-3xl">Sell your property</h1>
-        <p className="mt-3 text-[var(--ink-soft)]">
+        {/* Phones get the short version; the full copy returns from lg up, where
+            there is a column of space beside the form to fill. */}
+        <p className="mt-3 text-[var(--ink-soft)] lg:hidden">
           Tell us what you have. We&rsquo;ll find the right buyer.
         </p>
+        <p className="mt-4 hidden leading-relaxed text-[var(--ink-soft)] lg:block">
+          Tell us what you have. We will look at recent transactions in your locality, give you
+          an honest asking range, photograph the property properly, and bring you buyers who
+          have already been qualified.
+        </p>
 
-        <ol className="mt-6 space-y-3">
-          {[
-            ['Share', 'Property details.'],
-            ['Visit', 'We inspect and value.'],
-            ['List', 'We market it.'],
-            ['Sell', 'We handle the deal.'],
-          ].map(([title, body], index) => (
+        <ol className="mt-6 space-y-3 lg:mt-8 lg:space-y-5">
+          {(SHORT_STEPS as [string, string][]).map(([title, body], index) => (
             <li key={title} className="flex gap-4">
               <span className="mono mt-0.5 text-sm text-[var(--brass)]">{String(index + 1).padStart(2, '0')}</span>
               <div>
-                <p className="font-medium">{title}</p>
-                <p className="text-sm text-[var(--muted)]">{body}</p>
+                <p className="font-medium lg:hidden">{title}</p>
+                <p className="hidden font-medium lg:block">{FULL_STEPS[index][0]}</p>
+                <p className="text-sm text-[var(--muted)] lg:hidden">{body}</p>
+                <p className="hidden text-sm text-[var(--muted)] lg:block">{FULL_STEPS[index][1]}</p>
               </div>
             </li>
           ))}
