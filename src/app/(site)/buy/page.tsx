@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import BrowseFilters from '@/components/BrowseFilters';
+import FilterShell from '@/components/FilterShell';
 import ListingGrid from '@/components/ListingGrid';
 import { getListings, getFacets } from '@/lib/public-data';
 import type { PublicQuery } from '@/lib/search';
@@ -26,6 +27,10 @@ export default async function BuyPage({ searchParams }: { searchParams: PublicQu
   const query = { ...searchParams, type: 'SALE' };
   const [{ rows, total, page, pages }, facets] = await Promise.all([getListings(query), getFacets('SALE')]);
 
+  const activeCount = Object.entries(searchParams).filter(
+    ([key]) => !['sort', 'page', 'type'].includes(key),
+  ).length;
+
   return (
     <div className="wrap py-10">
       <p className="eyebrow">Buy</p>
@@ -36,7 +41,9 @@ export default async function BuyPage({ searchParams }: { searchParams: PublicQu
       </p>
 
       <div className="mt-8 grid gap-8 lg:grid-cols-[290px_1fr]">
-        <BrowseFilters categories={facets.categories} locations={facets.locations} segments={facets.segments} />
+        <FilterShell activeCount={activeCount}>
+          <BrowseFilters categories={facets.categories} locations={facets.locations} segments={facets.segments} />
+        </FilterShell>
 
         <div>
           <div className="plate mb-6 flex flex-wrap items-center justify-between gap-4 p-4">

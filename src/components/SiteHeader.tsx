@@ -263,13 +263,13 @@ export default function SiteHeader() {
       </div>
 
       {open && (
-        <nav id="site-menu" className="animate-rise border-t bg-white xl:hidden">
-          <div className="wrap grid grid-cols-2 gap-1 py-3">
-            <form action="/search" className="col-span-2 mb-2 flex gap-2">
+        <nav id="site-menu" className="animate-rise border-t border-white/60 bg-[#eef1f6] xl:hidden">
+          <div className="wrap space-y-4 py-4">
+            <form action="/search" className="flex gap-2">
               <input
                 type="search"
                 name="q"
-                placeholder="Property code, e.g. HNP-S-JBP-000023"
+                placeholder="Property code or locality"
                 aria-label="Search properties"
                 className="field min-w-0 flex-1"
               />
@@ -277,71 +277,55 @@ export default function SiteHeader() {
                 Search
               </button>
             </form>
-            {/* A dropdown has no room to open inside the mobile sheet, so parents
-                are flattened into their children — every destination stays one tap
-                away rather than two. */}
-            {NAV.flatMap((item) =>
-              item.children
-                ? item.children.map((child) => (
-                    <Link
-                      key={child.href}
-                      href={child.href}
-                      onClick={() => setOpen(false)}
-                      className="rounded-lg px-3 py-3 hover:bg-[var(--brand-soft)]"
-                    >
-                      {child.label}
-                    </Link>
-                  ))
-                : [
-                    item.artwork ? (
-                      <Link
-                        key={item.href}
-                        href={item.href}
-                        aria-label={item.label}
-                        onClick={() => setOpen(false)}
-                        className="col-span-2 flex justify-center py-2"
-                      >
-                        <Image src="/hot-deals-banner.png" alt="" width={1000} height={563} className="h-14 w-auto" />
-                      </Link>
-                    ) : (
-                      <Link
-                        key={item.href}
-                        href={item.href}
-                        onClick={() => setOpen(false)}
-                        className={
-                          item.accent
-                            ? `col-span-2 rounded-lg px-3 py-3 text-center font-semibold ${ACCENT_CLASS[item.accent]}`
-                            : 'rounded-lg px-3 py-3 hover:bg-[var(--brand-soft)]'
-                        }
-                      >
-                        {item.label}
-                      </Link>
-                    ),
-                  ],
-            )}
-            <Link
-              href="/requirement"
-              onClick={() => setOpen(false)}
-              className="rounded-lg px-3 py-3 hover:bg-[var(--brand-soft)]"
-            >
-              Requirements
-            </Link>
-            <Link href="/post" onClick={() => setOpen(false)} className="btn btn-primary col-span-2 mt-1">
+
+            {/* Every destination as an equal glass tile, in two even columns —
+                the old mix of bare links, a centred image and one wide button
+                read as a jumble. Dropdown parents are flattened so nothing is
+                two taps away. */}
+            <div className="grid grid-cols-2 gap-2.5">
+              {NAV.flatMap((item) =>
+                item.children
+                  ? item.children.map((child) => ({ href: child.href, label: child.label, artwork: false }))
+                  : [{ href: item.href, label: item.label, artwork: !!item.artwork }],
+              ).map((entry) => (
+                <Link
+                  key={entry.href}
+                  href={entry.href}
+                  onClick={() => setOpen(false)}
+                  className={`flex min-h-[52px] items-center justify-center rounded-[14px] px-3 py-2.5 text-center text-[14px] font-semibold transition ${
+                    pathname === entry.href ? GLASS_ACTIVE : GLASS
+                  }`}
+                >
+                  {entry.artwork ? (
+                    <Image src="/hot-deals-banner.png" alt="Hot Deals" width={1000} height={563} className="h-8 w-auto" />
+                  ) : (
+                    entry.label
+                  )}
+                </Link>
+              ))}
+              <Link
+                href="/requirement"
+                onClick={() => setOpen(false)}
+                className={`flex min-h-[52px] items-center justify-center rounded-[14px] px-3 py-2.5 text-center text-[14px] font-semibold transition ${GLASS}`}
+              >
+                Requirements
+              </Link>
+            </div>
+
+            <Link href="/post" onClick={() => setOpen(false)} className="btn btn-primary w-full">
               Post Your Property
             </Link>
-            <a href={`tel:${site.phone}`} className="col-span-2 rounded-lg px-3 py-3 font-semibold text-[var(--brand)]">
-              Call {site.phone}
-            </a>
-            {site.instagram && (
-              <a
-                href={site.instagram}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="col-span-2 flex items-center gap-2 rounded-lg px-3 py-3 font-semibold text-[var(--ink-soft)]"
-              >
-                <InstagramIcon className="h-5 w-5" /> Follow us on Instagram
+
+            <div className="flex items-center justify-center gap-5 pt-1 text-sm">
+              <a href={`tel:${site.phone}`} className="font-semibold text-[var(--brand)]">
+                Call {site.phone}
               </a>
-            )}
+              {site.instagram && (
+                <a href={site.instagram} target="_blank" rel="noopener noreferrer" className="text-[var(--muted)]">
+                  Instagram
+                </a>
+              )}
+            </div>
           </div>
         </nav>
       )}

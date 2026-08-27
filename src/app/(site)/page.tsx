@@ -21,12 +21,13 @@ const TRUST = [
   { icon: '🔑', title: 'End to End Support', body: 'From first search to possession', tint: 'bg-[#eae7fb]' },
 ];
 
+/** `short` is the two-word label used by the compact mobile tiles. */
 const ACTIONS = [
-  { href: '/buy', icon: '🏠', title: 'Buy Property', body: 'Find your next home or investment' },
-  { href: '/rent', icon: '🔑', title: 'Rent Property', body: 'Residential and commercial rentals' },
-  { href: '/sell', icon: '🏷️', title: 'Sell Property', body: 'List your property for sale' },
-  { href: '/give-on-rent', icon: '📋', title: 'Give on Rent', body: 'Find a screened tenant' },
-  { href: '/requirement', icon: '🔎', title: 'Submit Requirement', body: 'Tell us exactly what you need' },
+  { href: '/buy', icon: '🏠', title: 'Buy Property', short: 'Buy', body: 'Find your next home or investment' },
+  { href: '/rent', icon: '🔑', title: 'Rent Property', short: 'Rent', body: 'Residential and commercial rentals' },
+  { href: '/sell', icon: '🏷️', title: 'Sell Property', short: 'Sell', body: 'List your property for sale' },
+  { href: '/give-on-rent', icon: '📋', title: 'Give on Rent', short: 'Give on Rent', body: 'Find a screened tenant' },
+  { href: '/requirement', icon: '🔎', title: 'Submit Requirement', short: 'Requirement', body: 'Tell us exactly what you need' },
 ];
 
 export default async function HomePage() {
@@ -80,7 +81,25 @@ export default async function HomePage() {
             <a href={`tel:${site.phone}`} className="display block text-3xl">📞 {site.phone}</a>
             <p className="mt-1 text-xs text-white/60">Your trusted property consultant</p>
 
-            <div className="mt-4 space-y-2">
+            {/*
+              Phones get five compact tiles in a row — icon over a short label —
+              so the whole panel is glanceable without scrolling. From sm up the
+              original wide rows return, where there is room for the descriptions.
+            */}
+            <div className="mt-4 grid grid-cols-5 gap-1.5 sm:hidden">
+              {ACTIONS.map((item) => (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className="flex min-w-0 flex-col items-center gap-1 rounded-xl bg-white px-1 py-2.5 text-center transition active:scale-95"
+                >
+                  <span className="text-lg leading-none">{item.icon}</span>
+                  <span className="text-[10.5px] font-semibold leading-tight text-[var(--navy)]">{item.short}</span>
+                </Link>
+              ))}
+            </div>
+
+            <div className="mt-4 hidden space-y-2 sm:block">
               {ACTIONS.map((item) => (
                 <Link
                   key={item.href}

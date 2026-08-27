@@ -22,18 +22,16 @@ export default async function SellPage() {
       <div>
         <p className="eyebrow">Owners</p>
         <h1 className="display mt-2 text-3xl">Sell your property</h1>
-        <p className="mt-4 leading-relaxed text-[var(--ink-soft)]">
-          Tell us what you have. We will look at recent transactions in your locality, give you
-          an honest asking range, photograph the property properly, and bring you buyers who
-          have already been qualified.
+        <p className="mt-3 text-[var(--ink-soft)]">
+          Tell us what you have. We&rsquo;ll find the right buyer.
         </p>
 
-        <ol className="mt-8 space-y-5">
+        <ol className="mt-6 space-y-3">
           {[
-            ['You share the details', 'The form below takes two minutes. Documents are not needed yet.'],
-            ['We call and visit', 'We see the property, discuss pricing and check the ownership papers.'],
-            ['We list and market it', 'Photographs, website listing, WhatsApp circulation and our buyer database.'],
-            ['We handle the process', 'Site visits, negotiation, token, agreement and registration.'],
+            ['Share', 'Property details.'],
+            ['Visit', 'We inspect and value.'],
+            ['List', 'We market it.'],
+            ['Sell', 'We handle the deal.'],
           ].map(([title, body], index) => (
             <li key={title} className="flex gap-4">
               <span className="mono mt-0.5 text-sm text-[var(--brass)]">{String(index + 1).padStart(2, '0')}</span>

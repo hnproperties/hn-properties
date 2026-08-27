@@ -22,19 +22,17 @@ export default async function GiveOnRentPage() {
       <div>
         <p className="eyebrow">Owners</p>
         <h1 className="display mt-2 text-3xl">Give your property on rent</h1>
-        <p className="mt-4 leading-relaxed text-[var(--ink-soft)]">
-          We find tenants who can actually pay, screen them before they see the property,
-          and put a proper agreement in place. For commercial space we also handle deposit,
-          lock-in and escalation terms.
+        <p className="mt-3 text-[var(--ink-soft)]">
+          Find reliable tenants with a smooth, hassle-free rental process.
         </p>
 
-        <ul className="mt-8 space-y-4 text-sm">
+        <ul className="mt-6 space-y-2.5 text-sm">
           {[
-            'Tenant screening before the first viewing',
-            'Rent, deposit and escalation set against current market rates',
-            'Viewings arranged so you are not answering calls all day',
-            'Agreement drafting coordinated with your advocate',
-            'Commercial leasing: lock-in, maintenance and fit-out terms handled',
+            'Verified tenants',
+            'Market-based rent and deposit',
+            'Managed property visits',
+            'Agreement coordination',
+            'Commercial lease support',
           ].map((point) => (
             <li key={point} className="flex gap-3">
               <span className="text-[var(--brass)]">—</span>

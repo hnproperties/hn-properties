@@ -1,6 +1,7 @@
 'use client';
 
 import { useRef, useState } from 'react';
+import { compressImage } from '@/lib/compress-image';
 import Combobox from './Combobox';
 import LocationPicker from './LocationPicker';
 import { inrFull } from '@/lib/format';
@@ -57,8 +58,11 @@ function PhotoField({ urls, onChange }: { urls: string[]; onChange: (next: strin
     setError(null);
     const added: string[] = [];
 
-    for (const file of Array.from(files).slice(0, 15)) {
+    for (const original of Array.from(files).slice(0, 15)) {
       try {
+        // Shrink before uploading: camera photos are several megabytes, which is
+        // slow on mobile data and pointless for a listing photograph.
+        const file = await compressImage(original);
         const body = new FormData();
         body.append('file', file);
         const response = await fetch('/api/public/uploads', { method: 'POST', body });
