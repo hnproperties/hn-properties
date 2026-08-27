@@ -82,15 +82,15 @@ export default function SiteHeader() {
             alt=""
             width={80}
             height={80}
-            className="h-11 w-11 shrink-0 object-contain transition-transform duration-500 group-hover:scale-105"
+            className="h-14 w-14 shrink-0 object-contain transition-transform duration-500 group-hover:scale-105"
             priority
           />
           {/* min-w-0 + truncate on the tagline: if the nav ever needs more room,
               this line shortens instead of the nav overflowing into the buttons
               on the right, which is what caused the overlap before. */}
           <span className="min-w-0 leading-tight">
-            <span className="display block whitespace-nowrap text-xl text-[var(--navy)]">HN PROPERTIES</span>
-            <span className="block truncate text-sm text-[var(--muted)] xl:hidden 2xl:block">{site.city} Property Marketplace</span>
+            <span className="display block whitespace-nowrap text-2xl text-[var(--navy)]">HN PROPERTIES</span>
+            <span className="block truncate text-[15px] text-[var(--muted)] xl:hidden 2xl:block">{site.city} Property Marketplace</span>
           </span>
         </Link>
 
@@ -196,9 +196,9 @@ export default function SiteHeader() {
               target="_blank"
               rel="noopener noreferrer"
               aria-label="Follow HN Properties on Instagram"
-              className="hidden h-11 w-11 items-center justify-center rounded-xl bg-gradient-to-br from-[#f9ce34] via-[#ee2a7b] to-[#6228d7] text-white shadow-md transition duration-300 hover:-translate-y-0.5 hover:shadow-lg sm:inline-flex xl:hidden 2xl:inline-flex"
+              className="hidden h-9 w-9 items-center justify-center rounded-[14px] bg-gradient-to-br from-[#f9ce34] via-[#ee2a7b] to-[#6228d7] text-white shadow-md transition duration-300 hover:-translate-y-0.5 hover:shadow-lg sm:inline-flex xl:hidden 2xl:inline-flex"
             >
-              <InstagramIcon className="h-6 w-6" />
+              <InstagramIcon className="h-5 w-5" />
             </a>
           )}
 
@@ -208,21 +208,21 @@ export default function SiteHeader() {
             rel="noopener noreferrer"
             aria-label="Chat with us on WhatsApp"
             title="Chat on WhatsApp"
-            className="hidden h-11 w-11 items-center justify-center rounded-xl bg-[#25D366] text-white shadow-md transition duration-300 hover:-translate-y-0.5 hover:bg-[#1eb355] hover:shadow-lg sm:inline-flex"
+            className="hidden h-9 w-9 items-center justify-center rounded-[14px] bg-[#25D366] text-white shadow-md transition duration-300 hover:-translate-y-0.5 hover:bg-[#1eb355] hover:shadow-lg sm:inline-flex"
           >
-            <WhatsAppIcon className="h-6 w-6" />
+            <WhatsAppIcon className="h-5 w-5" />
           </a>
 
           <a
             href={`tel:${site.phone}`}
             aria-label={`Call ${site.name} on ${site.phone}`}
             title={`Call ${site.phone}`}
-            className="hidden h-11 w-11 items-center justify-center rounded-xl bg-[var(--navy)] text-white shadow-md transition duration-300 hover:-translate-y-0.5 hover:bg-[var(--navy-deep)] hover:shadow-lg sm:inline-flex"
+            className="hidden h-9 w-9 items-center justify-center rounded-[14px] bg-[var(--navy)] text-white shadow-md transition duration-300 hover:-translate-y-0.5 hover:bg-[var(--navy-deep)] hover:shadow-lg sm:inline-flex"
           >
-            <PhoneIcon className="h-6 w-6" />
+            <PhoneIcon className="h-5 w-5" />
           </a>
 
-          <Link href="/post" className="btn btn-primary sheen hidden whitespace-nowrap px-4 py-2.5 md:inline-flex">
+          <Link href="/post" className="btn btn-primary sheen hidden h-9 whitespace-nowrap rounded-[14px] px-3.5 py-2 text-[13.5px] md:inline-flex">
             Post Your Property
           </Link>
 
