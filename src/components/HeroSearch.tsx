@@ -257,6 +257,23 @@ export default function HeroSearch({ locations }: { categories?: Option[]; locat
           </button>
         </div>
       </div>
+
+      {/* Anyone handed a reference over WhatsApp arrives knowing the code and
+          nothing else, so give them a direct route rather than making them work
+          through the filters above. Phones only — the desktop header has its own
+          search button. */}
+      <form action="/search" className="flex gap-2 border-t px-4 py-3 lg:hidden">
+        <input
+          type="search"
+          name="q"
+          placeholder="Have a code? e.g. HNP-S-JBP-000023"
+          aria-label="Search by property code"
+          className="field min-w-0 flex-1"
+        />
+        <button type="submit" className="btn btn-ghost shrink-0">
+          Go
+        </button>
+      </form>
     </div>
   );
 }

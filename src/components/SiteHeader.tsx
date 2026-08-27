@@ -207,7 +207,7 @@ export default function SiteHeader() {
             alt=""
             width={1000}
             height={563}
-            className="h-10 w-auto drop-shadow-[0_0_5px_rgba(255,120,40,0.5)]"
+            className="h-11 w-auto drop-shadow-[0_0_5px_rgba(255,120,40,0.5)]"
           />
         </Link>
 
@@ -258,6 +258,17 @@ export default function SiteHeader() {
 
           <Link href="/post" className="btn btn-primary sheen hidden whitespace-nowrap px-4 py-2.5 md:inline-flex">
             Post Your Property
+          </Link>
+
+          <Link
+            href="/search"
+            aria-label="Search by property code"
+            className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-white/80 bg-gradient-to-br from-white to-[#e9edf3] text-[var(--navy)] shadow-[3px_3px_8px_rgba(163,177,198,0.45),-3px_-3px_8px_rgba(255,255,255,0.95)] xl:hidden"
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-5 w-5">
+              <circle cx="11" cy="11" r="7" />
+              <path d="m20 20-3.5-3.5" strokeLinecap="round" />
+            </svg>
           </Link>
 
           <button
