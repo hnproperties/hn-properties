@@ -47,6 +47,7 @@ type Props = {
 /** Photo picker for public forms. Uploads go to the rate-limited public endpoint. */
 function PhotoField({ urls, onChange }: { urls: string[]; onChange: (next: string[]) => void }) {
   const input = useRef<HTMLInputElement>(null);
+  const cameraInput = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -92,10 +93,35 @@ function PhotoField({ urls, onChange }: { urls: string[]; onChange: (next: strin
           className="hidden"
           onChange={(event) => upload(event.target.files)}
         />
+        {/*
+          A second input carrying `capture`, rather than adding the attribute to
+          the one above: `capture` forces the camera and removes the choice of
+          picking an existing photo, so the two need separate buttons. The camera
+          button only shows on small screens, since desktop browsers ignore
+          `capture` and would just open the same file dialog twice.
+        */}
+        <input
+          ref={cameraInput}
+          type="file"
+          accept="image/*"
+          capture="environment"
+          className="hidden"
+          onChange={(event) => upload(event.target.files)}
+        />
         <p className="text-[var(--muted)]">{busy ? 'Uploading…' : 'Drag photographs here, or'}</p>
-        <button type="button" className="btn btn-ghost mt-2" disabled={busy} onClick={() => input.current?.click()}>
-          Choose photographs
-        </button>
+        <div className="mt-2 flex flex-wrap justify-center gap-2">
+          <button type="button" className="btn btn-ghost" disabled={busy} onClick={() => input.current?.click()}>
+            Choose photographs
+          </button>
+          <button
+            type="button"
+            className="btn btn-ghost sm:hidden"
+            disabled={busy}
+            onClick={() => cameraInput.current?.click()}
+          >
+            📷 Take a photo
+          </button>
+        </div>
         <p className="mt-2 text-sm text-[var(--muted)]">
           Up to 15 photographs, 8 MB each. Good photographs do more for a property than anything else on this form.
         </p>

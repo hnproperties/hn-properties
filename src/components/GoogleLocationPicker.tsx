@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import type { CSSProperties } from 'react';
 
 /**
  * Google Maps location picker.
@@ -185,7 +186,20 @@ export default function GoogleLocationPicker({
 
   return (
     <div>
-      <div ref={searchHost} className="min-h-[42px]" />
+      <div
+        ref={searchHost}
+        className="min-h-[42px] [color-scheme:light]"
+        style={
+          {
+            '--gmp-mat-color-surface': '#ffffff',
+            '--gmp-mat-color-on-surface': '#10233c',
+            '--gmp-mat-color-on-surface-variant': '#405469',
+            '--gmp-mat-color-outline-decorative': '#d8dee7',
+            '--gmp-mat-color-primary': '#1583b5',
+            '--gmp-mat-color-on-primary': '#ffffff',
+          } as CSSProperties
+        }
+      />
 
       <div ref={mapHost} className="mt-3 h-[320px] w-full overflow-hidden rounded-lg border bg-[var(--paper)]" />
 

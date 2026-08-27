@@ -97,8 +97,8 @@ export default async function PropertyPage({ params }: { params: { publicId: str
         <span className="mono text-xs">{listing.publicId}</span>
       </nav>
 
-      <div className="grid gap-10 lg:grid-cols-[1.6fr_1fr]">
-        <div>
+      <div className="grid gap-10 lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
+        <div className="min-w-0">
           {/* Gallery — cover photograph first, chosen in the CRM */}
           <Gallery photos={photos} title={listing.publicTitle} />
 
@@ -207,7 +207,7 @@ export default async function PropertyPage({ params }: { params: { publicId: str
         </div>
 
         {/* Contact rail */}
-        <aside className="space-y-4 lg:sticky lg:top-24 lg:self-start">
+        <aside className="min-w-0 space-y-4 lg:sticky lg:top-24 lg:self-start">
           <div className="plate p-5">
             <p className="eyebrow">Reference</p>
             <p className="mono mt-1 text-lg">{listing.publicId}</p>

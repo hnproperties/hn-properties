@@ -82,15 +82,15 @@ export default function SiteHeader() {
             alt=""
             width={80}
             height={80}
-            className="h-14 w-14 shrink-0 object-contain transition-transform duration-500 group-hover:scale-105"
+            className="h-10 w-10 shrink-0 object-contain transition-transform duration-500 group-hover:scale-105 xl:h-14 xl:w-14"
             priority
           />
           {/* min-w-0 + truncate on the tagline: if the nav ever needs more room,
               this line shortens instead of the nav overflowing into the buttons
               on the right, which is what caused the overlap before. */}
           <span className="min-w-0 leading-tight">
-            <span className="display block whitespace-nowrap text-[19px] text-[var(--navy)]">HN PROPERTIES</span>
-            <span className="block truncate text-sm text-[var(--muted)] xl:hidden 2xl:block">{site.city} Property Marketplace</span>
+            <span className="display block whitespace-nowrap text-[15px] text-[var(--navy)] sm:text-[17px] xl:text-[19px]">HN PROPERTIES</span>
+            <span className="hidden truncate text-sm text-[var(--muted)] sm:block xl:hidden 2xl:block">{site.city} Property Marketplace</span>
           </span>
         </Link>
 
@@ -189,7 +189,19 @@ export default function SiteHeader() {
           })}
         </nav>
 
-        <div className="flex shrink-0 items-center gap-2.5">
+        {/* Hot Deals stays visible on phones — it is the loudest thing we have
+            and hiding it behind the menu wastes it. */}
+        <Link href="/hot-deals" aria-label="Hot Deals" className="mx-auto shrink-0 xl:hidden">
+          <Image
+            src="/hot-deals-banner.png"
+            alt=""
+            width={1000}
+            height={563}
+            className="h-8 w-auto drop-shadow-[0_2px_6px_rgba(220,38,0,0.4)]"
+          />
+        </Link>
+
+        <div className="flex shrink-0 items-center gap-2">
           {site.instagram && (
             <a
               href={site.instagram}
@@ -208,7 +220,7 @@ export default function SiteHeader() {
             rel="noopener noreferrer"
             aria-label="Chat with us on WhatsApp"
             title="Chat on WhatsApp"
-            className="hidden h-11 w-11 items-center justify-center rounded-xl bg-[#25D366] text-white shadow-md transition duration-300 hover:-translate-y-0.5 hover:bg-[#1eb355] hover:shadow-lg sm:inline-flex"
+            className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-[#25D366] xl:h-11 xl:w-11 text-white shadow-md transition duration-300 hover:-translate-y-0.5 hover:bg-[#1eb355] hover:shadow-lg"
           >
             <WhatsAppIcon className="h-6 w-6" />
           </a>
@@ -217,10 +229,22 @@ export default function SiteHeader() {
             href={`tel:${site.phone}`}
             aria-label={`Call ${site.name} on ${site.phone}`}
             title={`Call ${site.phone}`}
-            className="hidden h-11 w-11 items-center justify-center rounded-xl bg-[var(--navy)] text-white shadow-md transition duration-300 hover:-translate-y-0.5 hover:bg-[var(--navy-deep)] hover:shadow-lg sm:inline-flex"
+            className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-[var(--navy)] xl:h-11 xl:w-11 text-white shadow-md transition duration-300 hover:-translate-y-0.5 hover:bg-[var(--navy-deep)] hover:shadow-lg"
           >
             <PhoneIcon className="h-6 w-6" />
           </a>
+
+          <Link
+            href="/search"
+            aria-label="Search properties by code or keyword"
+            title="Search by property code"
+            className="hidden h-11 w-11 items-center justify-center rounded-xl border border-white/80 bg-gradient-to-br from-white to-[#e9edf3] text-[var(--navy)] shadow-[3px_3px_8px_rgba(163,177,198,0.45),-3px_-3px_8px_rgba(255,255,255,0.95)] transition duration-300 hover:-translate-y-0.5 hover:text-[var(--brand)] xl:inline-flex"
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-5 w-5">
+              <circle cx="11" cy="11" r="7" />
+              <path d="m20 20-3.5-3.5" strokeLinecap="round" />
+            </svg>
+          </Link>
 
           <Link href="/post" className="btn btn-primary sheen hidden whitespace-nowrap px-4 py-2.5 md:inline-flex">
             Post Your Property
@@ -241,6 +265,18 @@ export default function SiteHeader() {
       {open && (
         <nav id="site-menu" className="animate-rise border-t bg-white xl:hidden">
           <div className="wrap grid grid-cols-2 gap-1 py-3">
+            <form action="/search" className="col-span-2 mb-2 flex gap-2">
+              <input
+                type="search"
+                name="q"
+                placeholder="Property code, e.g. HNP-S-JBP-000023"
+                aria-label="Search properties"
+                className="field min-w-0 flex-1"
+              />
+              <button type="submit" className="btn btn-primary shrink-0" onClick={() => setOpen(false)}>
+                Search
+              </button>
+            </form>
             {/* A dropdown has no room to open inside the mobile sheet, so parents
                 are flattened into their children — every destination stays one tap
                 away rather than two. */}
