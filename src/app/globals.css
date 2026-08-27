@@ -59,6 +59,10 @@ html, body { overflow-x: clip; max-width: 100%; }
 gmp-place-autocomplete,
 gmp-basic-place-autocomplete {
   color-scheme: light;
+  /* The suggestion list is a child of the element, so it must be allowed to
+     escape any container and sit above the map rendered below it. */
+  position: relative;
+  z-index: 40;
   --gmp-mat-color-surface: #ffffff;
   --gmp-mat-color-on-surface: #10233c;
   --gmp-mat-color-on-surface-variant: #405469;

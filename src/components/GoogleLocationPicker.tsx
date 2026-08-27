@@ -186,9 +186,14 @@ export default function GoogleLocationPicker({
 
   return (
     <div>
+      {/*
+        No overflow-hidden here: the suggestion list renders below the input and
+        was being clipped by it. relative + z-index keeps the list above the map
+        that follows, which would otherwise paint over it.
+      */}
       <div
         ref={searchHost}
-        className="min-h-[42px] overflow-hidden rounded-lg border border-[var(--line)] bg-white [color-scheme:light]"
+        className="relative z-30 min-h-[42px] rounded-lg border border-[var(--line)] bg-white [color-scheme:light]"
         style={
           {
             '--gmp-mat-color-surface': '#ffffff',
