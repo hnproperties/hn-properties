@@ -150,14 +150,33 @@ export const FIELD_TYPES = {
     'flat', 'house', 'builder-floor', 'farmhouse', 'shop', 'office', 'commercial-building',
     'warehouse', 'godown', 'hotel', 'restaurant', 'institutional-property',
   ],
-  bedrooms: ['flat', 'house', 'builder-floor', 'farmhouse', 'hotel'],
+  bedrooms: ['flat', 'house', 'builder-floor', 'farmhouse'],
   floors: ['flat', 'builder-floor', 'shop', 'office', 'commercial-building', 'house', 'hotel'],
   parking: [
     'flat', 'house', 'builder-floor', 'farmhouse', 'shop', 'office', 'commercial-building',
     'hotel', 'restaurant', 'institutional-property',
   ],
-  furnishing: ['flat', 'house', 'builder-floor', 'farmhouse', 'office', 'shop', 'hotel', 'restaurant'],
+  furnishing: ['flat', 'house', 'builder-floor', 'farmhouse', 'office', 'shop', 'restaurant'],
+  hotelRooms: ['hotel'],
 };
+
+/**
+ * Maps a stored PropertyCategory to the slug the owner-facing field rules use,
+ * so the CRM entry form asks exactly what the public sell and rent forms ask.
+ * Most slugs already line up; only the merged categories need translating.
+ */
+const CATEGORY_SLUG_ALIASES: Record<string, string> = {
+  'flat-apartment': 'flat',
+  'house-villa': 'house',
+  'commercial-shop-showroom': 'shop',
+  'office-space': 'office',
+};
+
+export function ownerTypeFor(nameOrSlug?: string | null): string | undefined {
+  if (!nameOrSlug) return undefined;
+  const slug = nameOrSlug.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+  return CATEGORY_SLUG_ALIASES[slug] ?? slug;
+}
 
 export const site = {
   name: process.env.NEXT_PUBLIC_SITE_NAME || 'HN Properties',

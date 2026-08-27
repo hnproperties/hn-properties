@@ -87,6 +87,13 @@ export default async function GiveOnRentPage() {
             { name: 'carpetArea', label: 'Carpet area', type: 'number', half: true, visibleFor: FIELD_TYPES.carpetArea },
             { name: 'constructionYear', label: 'Year built', type: 'number', half: true, visibleFor: FIELD_TYPES.constructionYear },
 
+            { name: 'acRooms', label: 'AC rooms', type: 'number', half: true, section: 'Configuration', visibleFor: FIELD_TYPES.hotelRooms },
+            { name: 'nonAcRooms', label: 'Non-AC rooms', type: 'number', half: true, visibleFor: FIELD_TYPES.hotelRooms },
+            { name: 'banquetHalls', label: 'Banquet halls', type: 'number', half: true, visibleFor: FIELD_TYPES.hotelRooms },
+            { name: 'banquetCapacity', label: 'Banquet seating capacity', type: 'number', half: true, visibleFor: FIELD_TYPES.hotelRooms },
+            { name: 'hasRestaurant', label: 'Restaurant', type: 'checkbox', hint: 'On-site restaurant', half: true, visibleFor: FIELD_TYPES.hotelRooms },
+            { name: 'hotelParking', label: 'Parking spaces', type: 'number', half: true, visibleFor: FIELD_TYPES.hotelRooms },
+            { name: 'hotelNotes', label: 'Other facilities', type: 'textarea', placeholder: 'Lift, generator, kitchen, conference room, licences held — anything that matters.', visibleFor: FIELD_TYPES.hotelRooms },
             { name: 'bedrooms', label: 'Bedrooms', type: 'number', half: true, section: 'Configuration', visibleFor: FIELD_TYPES.bedrooms },
             { name: 'bathrooms', label: 'Bathrooms', type: 'number', half: true, visibleFor: FIELD_TYPES.bedrooms },
             { name: 'floorNumber', label: 'Floor number (optional)', type: 'number', half: true, visibleFor: FIELD_TYPES.floors },

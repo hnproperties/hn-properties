@@ -5,11 +5,13 @@ import { useRouter } from 'next/navigation';
 import {
   toOptions, AREA_UNITS, FACINGS, FURNISHINGS, MOTIVATIONS, SOURCE_TYPES,
   AMENITY_OPTIONS, BUSINESS_SUITABILITY, LISTING_TYPES, VISIBILITIES,
+  FIELD_TYPES, ownerTypeFor,
 } from '@/lib/constants';
 import { useCan } from '@/components/crm/CrmShell';
 import PhotoUploader from '@/components/crm/PhotoUploader';
 import LocationPicker from '@/components/LocationPicker';
 import { inr } from '@/lib/format';
+import { site } from '@/lib/constants';
 
 type Option = {
   value: string;
@@ -150,7 +152,31 @@ export default function PropertyWizard() {
     setBusy(true);
     setError(null);
     try {
-      const body = { ...form, media: photos.map((url, index) => ({ url, isCover: index === 0, sortOrder: index })) };
+      // Hotel figures have no columns of their own — a hotel is rare enough that
+      // adding six is not worth it — so they are folded into the private notes
+      // and stripped from the payload the API would otherwise reject.
+      const { acRooms, nonAcRooms, banquetHalls, banquetCapacity, hotelParking, hasRestaurant, ...rest } = form;
+      const hotelLines = [
+        acRooms && `AC rooms: ${acRooms}`,
+        nonAcRooms && `Non-AC rooms: ${nonAcRooms}`,
+        banquetHalls && `Banquet halls: ${banquetHalls}`,
+        banquetCapacity && `Banquet capacity: ${banquetCapacity}`,
+        hotelParking && `Parking spaces: ${hotelParking}`,
+        hasRestaurant && 'On-site restaurant: yes',
+      ].filter(Boolean);
+
+      const privateNote = [rest.privateNote, hotelLines.length ? hotelLines.join('\n') : null]
+        .filter(Boolean)
+        .join('\n');
+
+      const body = {
+        ...rest,
+        // A title is the one thing the record cannot exist without, so fall back
+        // to something recognisable rather than blocking the save.
+        title: (rest.title ?? '').trim() || `Untitled property — ${new Date().toLocaleDateString('en-IN')}`,
+        privateNote: privateNote || undefined,
+        media: photos.map((url, index) => ({ url, isCover: index === 0, sortOrder: index })),
+      };
       const response = await fetch(propertyId ? `/api/properties/${propertyId}` : '/api/properties', {
         method: propertyId ? 'PATCH' : 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -173,7 +199,16 @@ export default function PropertyWizard() {
     setBusy(true);
     setError(null);
     try {
-      const body = { ...listing, propertyId: id, status, publicTitle: listing.publicTitle || form.title };
+      const body = {
+        ...listing,
+        propertyId: id,
+        status,
+        // Falls back through the internal title to a placeholder, so a listing is
+        // never blocked purely for want of a public headline.
+        publicTitle:
+          (listing.publicTitle || form.title || '').trim() ||
+          `Property in ${site.city}`,
+      };
       const response = await fetch(listingId ? `/api/listings/${listingId}` : '/api/listings', {
         method: listingId ? 'PATCH' : 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -241,12 +276,25 @@ export default function PropertyWizard() {
    * field. Bedrooms on a warehouse and frontage on a flat were only ever noise.
    */
   const category = options('categories').find((c) => c.value === form.categoryId);
+
+  /**
+   * Ask exactly what the public sell and rent forms ask for this property type,
+   * using the same FIELD_TYPES rules rather than a second set that could drift
+   * out of step with them. Before a category is chosen everything shows.
+   */
+  const ownerType = ownerTypeFor(category?.label?.split(' · ')[0]);
+  const applies = (list: string[]) => !ownerType || list.includes(ownerType);
   const shows = {
-    bedrooms: !category || !!category.hasBedrooms,
-    furnishing: !category || !!category.hasFurnishing,
-    frontage: !category || !!category.hasFrontage || !!category.isLand,
-    built: !category || !category.isLand,
-    land: !category || !!category.isLand,
+    plotArea: applies(FIELD_TYPES.plotArea),
+    builtUpArea: applies(FIELD_TYPES.builtUpArea),
+    superBuiltArea: applies(FIELD_TYPES.superBuiltArea),
+    carpetArea: applies(FIELD_TYPES.carpetArea),
+    constructionYear: applies(FIELD_TYPES.constructionYear),
+    bedrooms: applies(FIELD_TYPES.bedrooms),
+    floors: applies(FIELD_TYPES.floors),
+    parking: applies(FIELD_TYPES.parking),
+    furnishing: applies(FIELD_TYPES.furnishing),
+    hotel: applies(FIELD_TYPES.hotelRooms) && !!ownerType,
   };
   return (
     <div>
@@ -367,9 +415,9 @@ export default function PropertyWizard() {
 
           {step === S.DETAILS && (
             <>
-              <Field label="Plot area" half><input type="number" onWheel={(e) => (e.target as HTMLInputElement).blur()} className="field" value={form.plotArea ?? ''} onChange={(e) => set('plotArea', e.target.value)} /></Field>
-              {shows.built && (<Field label="Built-up area" half><input type="number" onWheel={(e) => (e.target as HTMLInputElement).blur()} className="field" value={form.builtUpArea ?? ''} onChange={(e) => set('builtUpArea', e.target.value)} /></Field>)}
-              {shows.built && (<Field label="Carpet area" half><input type="number" onWheel={(e) => (e.target as HTMLInputElement).blur()} className="field" value={form.carpetArea ?? ''} onChange={(e) => set('carpetArea', e.target.value)} /></Field>)}
+              {shows.plotArea && (<Field label="Plot area" half><input type="number" onWheel={(e) => (e.target as HTMLInputElement).blur()} className="field" value={form.plotArea ?? ''} onChange={(e) => set('plotArea', e.target.value)} /></Field>)}
+              {shows.builtUpArea && (<Field label="Built-up area" half><input type="number" onWheel={(e) => (e.target as HTMLInputElement).blur()} className="field" value={form.builtUpArea ?? ''} onChange={(e) => set('builtUpArea', e.target.value)} /></Field>)}
+              {shows.carpetArea && (<Field label="Carpet area" half><input type="number" onWheel={(e) => (e.target as HTMLInputElement).blur()} className="field" value={form.carpetArea ?? ''} onChange={(e) => set('carpetArea', e.target.value)} /></Field>)}
               <Field label="Area unit" half>
                 <select className="field" value={form.areaUnit} onChange={(e) => set('areaUnit', e.target.value)}>
                   {toOptions(AREA_UNITS).map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
@@ -377,7 +425,7 @@ export default function PropertyWizard() {
               </Field>
               {shows.bedrooms && (<Field label="Bedrooms" half><input type="number" onWheel={(e) => (e.target as HTMLInputElement).blur()} className="field" value={form.bedrooms ?? ''} onChange={(e) => set('bedrooms', e.target.value)} /></Field>)}
               {shows.bedrooms && (<Field label="Bathrooms" half><input type="number" onWheel={(e) => (e.target as HTMLInputElement).blur()} className="field" value={form.bathrooms ?? ''} onChange={(e) => set('bathrooms', e.target.value)} /></Field>)}
-              {shows.built && (<Field label="Covered parking" half><input type="number" onWheel={(e) => (e.target as HTMLInputElement).blur()} className="field" value={form.parkingCovered ?? ''} onChange={(e) => set('parkingCovered', e.target.value)} /></Field>)}
+              {shows.parking && (<Field label="Covered parking" half><input type="number" onWheel={(e) => (e.target as HTMLInputElement).blur()} className="field" value={form.parkingCovered ?? ''} onChange={(e) => set('parkingCovered', e.target.value)} /></Field>)}
               {shows.furnishing && (<Field label="Furnishing" half>
                 <select className="field" value={form.furnishing ?? ''} onChange={(e) => set('furnishing', e.target.value)}>
                   <option value="">Not set</option>
@@ -390,14 +438,54 @@ export default function PropertyWizard() {
                   {toOptions(FACINGS).map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
                 </select>
               </Field>
-              {shows.frontage && (<Field label="Frontage (ft)" half><input type="number" onWheel={(e) => (e.target as HTMLInputElement).blur()} className="field" value={form.frontageFeet ?? ''} onChange={(e) => set('frontageFeet', e.target.value)} /></Field>)}
+              {shows.plotArea && (<Field label="Frontage (ft)" half><input type="number" onWheel={(e) => (e.target as HTMLInputElement).blur()} className="field" value={form.frontageFeet ?? ''} onChange={(e) => set('frontageFeet', e.target.value)} /></Field>)}
               <Field label="Road width (ft)" half><input type="number" onWheel={(e) => (e.target as HTMLInputElement).blur()} className="field" value={form.roadWidthFeet ?? ''} onChange={(e) => set('roadWidthFeet', e.target.value)} /></Field>
-              {shows.built && (<Field label="Year built" half><input type="number" onWheel={(e) => (e.target as HTMLInputElement).blur()} className="field" value={form.constructionYear ?? ''} onChange={(e) => set('constructionYear', e.target.value)} /></Field>)}
+              {shows.constructionYear && (<Field label="Year built" half><input type="number" onWheel={(e) => (e.target as HTMLInputElement).blur()} className="field" value={form.constructionYear ?? ''} onChange={(e) => set('constructionYear', e.target.value)} /></Field>)}
               {category && (
                 <p className="text-sm text-[var(--muted)] sm:col-span-2">
                   Showing the fields that apply to {category.label.split(' · ')[0]}. Change the category on the
                   Basics step to see a different set.
                 </p>
+              )}
+              {shows.superBuiltArea && (
+                <Field label="Super built-up area" half>
+                  <input type="number" onWheel={(e) => (e.target as HTMLInputElement).blur()} className="field" value={form.superBuiltArea ?? ''} onChange={(e) => set('superBuiltArea', e.target.value)} />
+                </Field>
+              )}
+              {shows.floors && (
+                <Field label="Floor number" half>
+                  <input type="number" onWheel={(e) => (e.target as HTMLInputElement).blur()} className="field" value={form.floorNumber ?? ''} onChange={(e) => set('floorNumber', e.target.value)} />
+                </Field>
+              )}
+              {shows.floors && (
+                <Field label="Total floors" half>
+                  <input type="number" onWheel={(e) => (e.target as HTMLInputElement).blur()} className="field" value={form.totalFloors ?? ''} onChange={(e) => set('totalFloors', e.target.value)} />
+                </Field>
+              )}
+              {shows.hotel && (
+                <div className="sm:col-span-2">
+                  <p className="label">Hotel configuration</p>
+                  <p className="text-sm text-[var(--muted)]">
+                    Rooms and facilities are recorded in the private notes below, since a hotel does not fit the
+                    bedroom fields used for homes.
+                  </p>
+                  <div className="mt-2 grid gap-3 sm:grid-cols-2">
+                    <label className="block"><span className="label">AC rooms</span>
+                      <input type="number" className="field" value={form.acRooms ?? ''} onChange={(e) => set('acRooms', e.target.value)} /></label>
+                    <label className="block"><span className="label">Non-AC rooms</span>
+                      <input type="number" className="field" value={form.nonAcRooms ?? ''} onChange={(e) => set('nonAcRooms', e.target.value)} /></label>
+                    <label className="block"><span className="label">Banquet halls</span>
+                      <input type="number" className="field" value={form.banquetHalls ?? ''} onChange={(e) => set('banquetHalls', e.target.value)} /></label>
+                    <label className="block"><span className="label">Banquet capacity</span>
+                      <input type="number" className="field" value={form.banquetCapacity ?? ''} onChange={(e) => set('banquetCapacity', e.target.value)} /></label>
+                    <label className="block"><span className="label">Parking spaces</span>
+                      <input type="number" className="field" value={form.hotelParking ?? ''} onChange={(e) => set('hotelParking', e.target.value)} /></label>
+                    <label className="flex items-center gap-2 pt-6 text-sm">
+                      <input type="checkbox" checked={!!form.hasRestaurant} onChange={(e) => set('hasRestaurant', e.target.checked)} />
+                      On-site restaurant
+                    </label>
+                  </div>
+                </div>
               )}
               <Field label="Features">
                 <div className="flex flex-wrap gap-2 rounded-[3px] border p-2">
