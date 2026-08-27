@@ -45,16 +45,19 @@ const NAV: NavItem[] = [
 ];
 
 const ACCENT_CLASS = {
-  gold: 'border border-white/70 bg-white/55 backdrop-blur-md text-[var(--navy)] shadow-[inset_0_1px_0_rgba(255,255,255,0.95),0_4px_14px_-5px_rgba(15,42,80,0.28)] hover:-translate-y-0.5 hover:bg-white/85',
+  gold: 'border border-white/90 bg-gradient-to-br from-white to-[#e7ecf3] text-[var(--navy)] shadow-[5px_5px_11px_rgba(163,177,198,0.5),-5px_-5px_11px_rgba(255,255,255,0.95),inset_0_1px_0_rgba(255,255,255,0.9)] hover:shadow-[7px_7px_14px_rgba(163,177,198,0.55),-7px_-7px_14px_rgba(255,255,255,1),inset_0_1px_0_rgba(255,255,255,0.9)] hover:-translate-y-0.5',
 } as const;
 
-/** Frosted pill shared by the plain nav items and the dropdown trigger. */
+/**
+ * Soft-extruded pill: a light shadow up-left, a darker one down-right, plus a thin
+ * inner highlight along the top edge. Hover deepens both shadows so the button
+ * appears to rise; the active state inverts them so it appears pressed in.
+ */
 const GLASS =
-  'border border-white/60 bg-white/45 backdrop-blur-md text-[var(--ink-soft)] shadow-[inset_0_1px_0_rgba(255,255,255,0.85),0_2px_10px_-4px_rgba(15,42,80,0.18)] hover:-translate-y-0.5 hover:bg-white/75 hover:text-[var(--brand)]';
+  'border border-white/80 bg-gradient-to-br from-white to-[#e9edf3] text-[var(--ink-soft)] shadow-[5px_5px_11px_rgba(163,177,198,0.45),-5px_-5px_11px_rgba(255,255,255,0.95),inset_0_1px_0_rgba(255,255,255,0.85)] hover:-translate-y-0.5 hover:text-[var(--brand)] hover:shadow-[7px_7px_14px_rgba(163,177,198,0.5),-7px_-7px_14px_rgba(255,255,255,1),inset_0_1px_0_rgba(255,255,255,0.9)]';
 
-/** The same glass, tinted to brand blue, for the current page. */
 const GLASS_ACTIVE =
-  'border border-white/40 bg-gradient-to-b from-[#3ea3d0] to-[#1583b5] text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.5),0_6px_18px_-6px_rgba(21,131,181,0.75)]';
+  'border border-white/50 bg-[#e6eaf1] text-[var(--brand)] shadow-[inset_4px_4px_9px_rgba(163,177,198,0.6),inset_-4px_-4px_9px_rgba(255,255,255,0.95)]';
 
 export default function SiteHeader() {
   const [open, setOpen] = useState(false);
@@ -69,7 +72,7 @@ export default function SiteHeader() {
   }, [pathname]);
 
   return (
-    <header className="sticky top-0 z-40 border-b border-white/50 bg-white/70 backdrop-blur-xl backdrop-saturate-150">
+    <header className="sticky top-0 z-40 border-b border-white/60 bg-[#eef1f6]/85 backdrop-blur-xl backdrop-saturate-150">
       <div className="wrap flex h-[68px] items-center justify-between gap-4">
         {/* whitespace-nowrap throughout: at narrower widths the labels were breaking
             across three lines and pushing the whole header out of shape. */}
@@ -91,14 +94,14 @@ export default function SiteHeader() {
           </span>
         </Link>
 
-        <nav className="hidden min-w-0 flex-1 items-center justify-center gap-2 xl:flex 2xl:gap-3">
+        <nav className="hidden min-w-0 flex-1 items-center justify-center gap-3 xl:flex 2xl:gap-4">
           {NAV.map((item) => {
             const active = item.href === '/' ? pathname === '/' : pathname.startsWith(item.href);
             const accent = item.accent ? ACCENT_CLASS[item.accent] : null;
             const childActive = item.children?.some((c) => pathname.startsWith(c.href));
 
             const base =
-              'whitespace-nowrap rounded-xl px-4 py-2.5 text-[15px] font-semibold transition duration-300 2xl:px-5';
+              'whitespace-nowrap rounded-[14px] px-3.5 py-2 text-[13.5px] font-semibold transition duration-300 2xl:px-4';
             const stateClass = accent
               ? `${accent} ${active ? 'ring-2 ring-white/70 ring-offset-2 ring-offset-transparent' : ''}`
               : active || childActive
@@ -130,7 +133,7 @@ export default function SiteHeader() {
                       className="absolute left-1/2 top-full z-50 w-64 -translate-x-1/2 pt-2"
                       role="menu"
                     >
-                      <div className="overflow-hidden rounded-2xl border border-white/60 bg-white/80 p-1.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.9),0_18px_40px_-12px_rgba(15,42,80,0.35)] backdrop-blur-xl">
+                      <div className="overflow-hidden rounded-2xl border border-white/80 bg-gradient-to-br from-white to-[#eaeef4] p-2 shadow-[8px_8px_20px_rgba(163,177,198,0.5),-8px_-8px_20px_rgba(255,255,255,0.95),inset_0_1px_0_rgba(255,255,255,0.9)] backdrop-blur-xl">
                         {item.children.map((child) => (
                           <Link
                             key={child.href}
@@ -172,7 +175,7 @@ export default function SiteHeader() {
                     width={1000}
                     height={563}
                     priority
-                    className="h-11 w-auto drop-shadow-[0_3px_8px_rgba(220,38,0,0.45)] 2xl:h-12"
+                    className="h-9 w-auto drop-shadow-[0_3px_8px_rgba(220,38,0,0.4)] 2xl:h-10"
                   />
                 </Link>
               );
