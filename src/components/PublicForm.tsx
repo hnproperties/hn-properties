@@ -300,13 +300,13 @@ export default function PublicForm({ endpoint, fields, hidden, submitLabel, succ
                     id={`f-${field.name}`}
                     type="text"
                     inputMode="decimal"
-                    className={`${inputClass} flex-1`}
+                    className={`${inputClass} min-w-0 flex-1`}
                     placeholder="e.g. 35"
                     value={part.amount}
                     onChange={(e) => apply({ amount: e.target.value.replace(/[^\d.]/g, '') })}
                   />
                   <select
-                    className="field w-[130px]"
+                    className="field w-[104px] shrink-0 sm:w-[130px]"
                     aria-label="Unit"
                     value={part.unit}
                     onChange={(e) => apply({ unit: e.target.value })}

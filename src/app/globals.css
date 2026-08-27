@@ -52,6 +52,20 @@ html { font-size: 13px; }
 /* Nothing should ever push the page sideways. */
 html, body { overflow-x: clip; max-width: 100%; }
 
+/* Mobile overflow guard.
+   Grid and flex children default to min-width:auto, so anything with a wide
+   intrinsic size — a photo strip, a long reference code, a side-by-side input
+   pair — stretches its column past the viewport. Combined with the overflow-x:
+   clip above, the excess was silently chopped off rather than scrolling, which
+   is why parts of pages appeared cut on phones.
+
+   Scoped to below 1024px so the desktop layout is untouched. */
+@media (max-width: 1023px) {
+  main :where(.grid, .flex) > * { min-width: 0; }
+  main :where(img, svg, video, table) { max-width: 100%; }
+}
+
+
 body {
   background: var(--paper);
   color: var(--ink);

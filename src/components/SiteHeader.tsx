@@ -76,7 +76,7 @@ export default function SiteHeader() {
       <div className="wrap flex h-[68px] items-center justify-between gap-4">
         {/* whitespace-nowrap throughout: at narrower widths the labels were breaking
             across three lines and pushing the whole header out of shape. */}
-        <Link href="/" className="group flex min-w-0 shrink items-center gap-3">
+        <Link href="/" className="group flex min-w-0 shrink items-center gap-2 xl:shrink-0 xl:gap-3">
           <Image
             src="/logo.png"
             alt=""
@@ -89,7 +89,7 @@ export default function SiteHeader() {
               this line shortens instead of the nav overflowing into the buttons
               on the right, which is what caused the overlap before. */}
           <span className="min-w-0 leading-tight">
-            <span className="display block whitespace-nowrap text-[15px] text-[var(--navy)] sm:text-[17px] xl:text-[19px]">HN PROPERTIES</span>
+            <span className="display block truncate text-[15px] text-[var(--navy)] sm:text-[17px] xl:whitespace-nowrap xl:text-[19px]">HN PROPERTIES</span>
             <span className="hidden truncate text-sm text-[var(--muted)] sm:block xl:hidden 2xl:block">{site.city} Property Marketplace</span>
           </span>
         </Link>
@@ -191,7 +191,7 @@ export default function SiteHeader() {
 
         {/* Hot Deals stays visible on phones — it is the loudest thing we have
             and hiding it behind the menu wastes it. */}
-        <Link href="/hot-deals" aria-label="Hot Deals" className="mx-auto shrink-0 xl:hidden">
+        <Link href="/hot-deals" aria-label="Hot Deals" className="ml-auto shrink-0 xl:hidden">
           <Image
             src="/hot-deals-banner.png"
             alt=""
@@ -201,7 +201,7 @@ export default function SiteHeader() {
           />
         </Link>
 
-        <div className="flex shrink-0 items-center gap-2">
+        <div className="flex shrink-0 items-center gap-2 xl:gap-2">
           {site.instagram && (
             <a
               href={site.instagram}
@@ -220,7 +220,7 @@ export default function SiteHeader() {
             rel="noopener noreferrer"
             aria-label="Chat with us on WhatsApp"
             title="Chat on WhatsApp"
-            className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-[#25D366] xl:h-11 xl:w-11 text-white shadow-md transition duration-300 hover:-translate-y-0.5 hover:bg-[#1eb355] hover:shadow-lg"
+            className="hidden h-11 w-11 items-center justify-center rounded-xl bg-[#25D366] xl:inline-flex text-white shadow-md transition duration-300 hover:-translate-y-0.5 hover:bg-[#1eb355] hover:shadow-lg"
           >
             <WhatsAppIcon className="h-6 w-6" />
           </a>
@@ -229,7 +229,7 @@ export default function SiteHeader() {
             href={`tel:${site.phone}`}
             aria-label={`Call ${site.name} on ${site.phone}`}
             title={`Call ${site.phone}`}
-            className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-[var(--navy)] xl:h-11 xl:w-11 text-white shadow-md transition duration-300 hover:-translate-y-0.5 hover:bg-[var(--navy-deep)] hover:shadow-lg"
+            className="hidden h-11 w-11 items-center justify-center rounded-xl bg-[var(--navy)] xl:inline-flex text-white shadow-md transition duration-300 hover:-translate-y-0.5 hover:bg-[var(--navy-deep)] hover:shadow-lg"
           >
             <PhoneIcon className="h-6 w-6" />
           </a>

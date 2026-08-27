@@ -188,7 +188,7 @@ export default function GoogleLocationPicker({
     <div>
       <div
         ref={searchHost}
-        className="min-h-[42px] [color-scheme:light]"
+        className="min-h-[42px] overflow-hidden rounded-lg border border-[var(--line)] bg-white [color-scheme:light]"
         style={
           {
             '--gmp-mat-color-surface': '#ffffff',
