@@ -11,11 +11,37 @@ import PhotoUploader from '@/components/crm/PhotoUploader';
 import LocationPicker from '@/components/LocationPicker';
 import { inr } from '@/lib/format';
 
-type Option = { value: string; label: string };
+type Option = {
+  value: string;
+  label: string;
+  /** Category lookups carry these so the Details step can adapt to the type. */
+  segment?: string;
+  hasBedrooms?: boolean;
+  hasFurnishing?: boolean;
+  hasFrontage?: boolean;
+  isLand?: boolean;
+};
 
 const STEPS = [
-  'Basics', 'Location', 'Details', 'Financials', 'Owner',
+  'Purpose', 'Basics', 'Location', 'Details', 'Financials', 'Owner',
   'Photos', 'Documents', 'Visibility', 'Verification', 'Publish',
+];
+
+/**
+ * Sale, rent and lease need different questions further along — a deposit and
+ * lock-in matter for a lease and not for a sale — so the wizard asks this first
+ * and branches on the answer rather than showing every field to everyone.
+ */
+/** Index of each step, so inserting one never breaks the comparisons below. */
+const S = {
+  PURPOSE: 0, BASICS: 1, LOCATION: 2, DETAILS: 3, FINANCIALS: 4, OWNER: 5,
+  PHOTOS: 6, DOCUMENTS: 7, VISIBILITY: 8, VERIFICATION: 9, PUBLISH: 10,
+} as const;
+
+const PURPOSES: { value: string; title: string; body: string }[] = [
+  { value: 'SALE', title: 'Sell', body: 'Owner wants to sell the property outright.' },
+  { value: 'RENT', title: 'Rent', body: 'Residential or short commercial tenancy, rent paid monthly.' },
+  { value: 'LEASE', title: 'Lease', body: 'Longer commercial lease with deposit, lock-in and escalation.' },
 ];
 
 /**
@@ -53,7 +79,45 @@ export default function PropertyWizard() {
   const [publicId, setPublicId] = useState<string | null>(null);
   const [duplicates, setDuplicates] = useState<any[]>([]);
   const [busy, setBusy] = useState(false);
+  const [newOwner, setNewOwner] = useState<{ name: string; phone: string; whatsapp?: string; email?: string } | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  /**
+   * Create an owner without leaving the wizard, then select it. Refreshes the
+   * owners lookup so the new record appears in the dropdown rather than the
+   * selection pointing at something the list does not contain.
+   */
+  async function createOwner() {
+    if (!newOwner) return;
+    setBusy(true);
+    setError(null);
+    try {
+      const response = await fetch('/api/owners', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: newOwner.name.trim(),
+          phone: newOwner.phone.trim(),
+          whatsapp: newOwner.whatsapp?.trim() || undefined,
+          email: newOwner.email?.trim() || undefined,
+          sourceType: form.sourceType,
+        }),
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(payload.error ?? 'Could not create that owner');
+
+      const created = payload.data ?? payload;
+      const refreshed = await fetch('/api/lookups?name=owners').then((r) => r.json()).catch(() => null);
+      if (refreshed) setLookups((current) => ({ ...current, owners: refreshed.data ?? refreshed }));
+
+      set('ownerId', created.id);
+      setNewOwner(null);
+    } catch (problem: any) {
+      setError(problem.message ?? 'Could not create that owner');
+    } finally {
+      setBusy(false);
+    }
+  }
 
   const set = (name: string, value: any) => setForm((current) => ({ ...current, [name]: value }));
   const setL = (name: string, value: any) => setListing((current) => ({ ...current, [name]: value }));
@@ -141,9 +205,9 @@ export default function PropertyWizard() {
 
   async function next() {
     try {
-      if (step === 0) await checkDuplicates();
-      if (step === 3) await saveProperty();
-      if (step === 6 && propertyId) await saveDocuments(propertyId);
+      if (step === S.BASICS) await checkDuplicates();
+      if (step === S.FINANCIALS) await saveProperty();
+      if (step === S.DOCUMENTS && propertyId) await saveDocuments(propertyId);
       setStep((s) => Math.min(STEPS.length - 1, s + 1));
     } catch {
       /* the error is already on screen */
@@ -170,6 +234,20 @@ export default function PropertyWizard() {
   }
 
   const options = (name: string) => lookups[name] ?? [];
+
+  /**
+   * Which detail fields make sense for the chosen category. Before a category is
+   * picked everything shows, so nothing is hidden from someone who skipped the
+   * field. Bedrooms on a warehouse and frontage on a flat were only ever noise.
+   */
+  const category = options('categories').find((c) => c.value === form.categoryId);
+  const shows = {
+    bedrooms: !category || !!category.hasBedrooms,
+    furnishing: !category || !!category.hasFurnishing,
+    frontage: !category || !!category.hasFrontage || !!category.isLand,
+    built: !category || !category.isLand,
+    land: !category || !!category.isLand,
+  };
   return (
     <div>
       <header>
@@ -202,7 +280,35 @@ export default function PropertyWizard() {
 
       <div className="plate mt-5 p-6">
         <div className="grid gap-4 sm:grid-cols-2">
-          {step === 0 && (
+          {step === S.PURPOSE && (
+            <div className="sm:col-span-2">
+              <p className="text-[var(--ink-soft)]">
+                What is the owner doing with this property? The rest of the form adapts to your answer.
+              </p>
+              <div className="mt-4 grid gap-3 sm:grid-cols-3">
+                {PURPOSES.map((purpose) => {
+                  const active = listing.listingType === purpose.value;
+                  return (
+                    <button
+                      key={purpose.value}
+                      type="button"
+                      onClick={() => setL('listingType', purpose.value)}
+                      className={`rounded-xl border p-4 text-left transition ${
+                        active
+                          ? 'border-[var(--brand)] bg-[var(--brand-soft)] shadow-sm'
+                          : 'border-[var(--line)] hover:border-[var(--brand)]'
+                      }`}
+                    >
+                      <span className="display block text-lg text-[var(--navy)]">{purpose.title}</span>
+                      <span className="mt-1 block text-sm text-[var(--muted)]">{purpose.body}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {step === S.BASICS && (
             <>
               <Field label="Internal title">
                 <input className="field" value={form.title ?? ''} onChange={(e) => set('title', e.target.value)} placeholder="3BHK flat in Napier Town" />
@@ -224,7 +330,7 @@ export default function PropertyWizard() {
             </>
           )}
 
-          {step === 1 && (
+          {step === S.LOCATION && (
             <>
               <Field label="Locality" half>
                 <select className="field" value={form.locationId ?? ''} onChange={(e) => set('locationId', e.target.value)}>
@@ -259,34 +365,40 @@ export default function PropertyWizard() {
             </>
           )}
 
-          {step === 2 && (
+          {step === S.DETAILS && (
             <>
               <Field label="Plot area" half><input type="number" onWheel={(e) => (e.target as HTMLInputElement).blur()} className="field" value={form.plotArea ?? ''} onChange={(e) => set('plotArea', e.target.value)} /></Field>
-              <Field label="Built-up area" half><input type="number" onWheel={(e) => (e.target as HTMLInputElement).blur()} className="field" value={form.builtUpArea ?? ''} onChange={(e) => set('builtUpArea', e.target.value)} /></Field>
-              <Field label="Carpet area" half><input type="number" onWheel={(e) => (e.target as HTMLInputElement).blur()} className="field" value={form.carpetArea ?? ''} onChange={(e) => set('carpetArea', e.target.value)} /></Field>
+              {shows.built && (<Field label="Built-up area" half><input type="number" onWheel={(e) => (e.target as HTMLInputElement).blur()} className="field" value={form.builtUpArea ?? ''} onChange={(e) => set('builtUpArea', e.target.value)} /></Field>)}
+              {shows.built && (<Field label="Carpet area" half><input type="number" onWheel={(e) => (e.target as HTMLInputElement).blur()} className="field" value={form.carpetArea ?? ''} onChange={(e) => set('carpetArea', e.target.value)} /></Field>)}
               <Field label="Area unit" half>
                 <select className="field" value={form.areaUnit} onChange={(e) => set('areaUnit', e.target.value)}>
                   {toOptions(AREA_UNITS).map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
                 </select>
               </Field>
-              <Field label="Bedrooms" half><input type="number" onWheel={(e) => (e.target as HTMLInputElement).blur()} className="field" value={form.bedrooms ?? ''} onChange={(e) => set('bedrooms', e.target.value)} /></Field>
-              <Field label="Bathrooms" half><input type="number" onWheel={(e) => (e.target as HTMLInputElement).blur()} className="field" value={form.bathrooms ?? ''} onChange={(e) => set('bathrooms', e.target.value)} /></Field>
-              <Field label="Covered parking" half><input type="number" onWheel={(e) => (e.target as HTMLInputElement).blur()} className="field" value={form.parkingCovered ?? ''} onChange={(e) => set('parkingCovered', e.target.value)} /></Field>
-              <Field label="Furnishing" half>
+              {shows.bedrooms && (<Field label="Bedrooms" half><input type="number" onWheel={(e) => (e.target as HTMLInputElement).blur()} className="field" value={form.bedrooms ?? ''} onChange={(e) => set('bedrooms', e.target.value)} /></Field>)}
+              {shows.bedrooms && (<Field label="Bathrooms" half><input type="number" onWheel={(e) => (e.target as HTMLInputElement).blur()} className="field" value={form.bathrooms ?? ''} onChange={(e) => set('bathrooms', e.target.value)} /></Field>)}
+              {shows.built && (<Field label="Covered parking" half><input type="number" onWheel={(e) => (e.target as HTMLInputElement).blur()} className="field" value={form.parkingCovered ?? ''} onChange={(e) => set('parkingCovered', e.target.value)} /></Field>)}
+              {shows.furnishing && (<Field label="Furnishing" half>
                 <select className="field" value={form.furnishing ?? ''} onChange={(e) => set('furnishing', e.target.value)}>
                   <option value="">Not set</option>
                   {toOptions(FURNISHINGS).map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
                 </select>
-              </Field>
+              </Field>)}
               <Field label="Facing" half>
                 <select className="field" value={form.facing ?? ''} onChange={(e) => set('facing', e.target.value)}>
                   <option value="">Not set</option>
                   {toOptions(FACINGS).map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
                 </select>
               </Field>
-              <Field label="Frontage (ft)" half><input type="number" onWheel={(e) => (e.target as HTMLInputElement).blur()} className="field" value={form.frontageFeet ?? ''} onChange={(e) => set('frontageFeet', e.target.value)} /></Field>
+              {shows.frontage && (<Field label="Frontage (ft)" half><input type="number" onWheel={(e) => (e.target as HTMLInputElement).blur()} className="field" value={form.frontageFeet ?? ''} onChange={(e) => set('frontageFeet', e.target.value)} /></Field>)}
               <Field label="Road width (ft)" half><input type="number" onWheel={(e) => (e.target as HTMLInputElement).blur()} className="field" value={form.roadWidthFeet ?? ''} onChange={(e) => set('roadWidthFeet', e.target.value)} /></Field>
-              <Field label="Year built" half><input type="number" onWheel={(e) => (e.target as HTMLInputElement).blur()} className="field" value={form.constructionYear ?? ''} onChange={(e) => set('constructionYear', e.target.value)} /></Field>
+              {shows.built && (<Field label="Year built" half><input type="number" onWheel={(e) => (e.target as HTMLInputElement).blur()} className="field" value={form.constructionYear ?? ''} onChange={(e) => set('constructionYear', e.target.value)} /></Field>)}
+              {category && (
+                <p className="text-sm text-[var(--muted)] sm:col-span-2">
+                  Showing the fields that apply to {category.label.split(' · ')[0]}. Change the category on the
+                  Basics step to see a different set.
+                </p>
+              )}
               <Field label="Features">
                 <div className="flex flex-wrap gap-2 rounded-[3px] border p-2">
                   {AMENITY_OPTIONS.map((amenity) => {
@@ -324,7 +436,7 @@ export default function PropertyWizard() {
             </>
           )}
 
-          {step === 3 && (
+          {step === S.FINANCIALS && (
             <>
               <Field label="Asking price / monthly rent (₹)" half>
                 <input type="number" onWheel={(e) => (e.target as HTMLInputElement).blur()} className="field" value={listing.price ?? ''} onChange={(e) => setL('price', e.target.value)} />
@@ -357,14 +469,53 @@ export default function PropertyWizard() {
             </>
           )}
 
-          {step === 4 && (
+          {step === S.OWNER && (
             <>
               <Field label="Owner record" half>
-                <select className="field" value={form.ownerId ?? ''} onChange={(e) => set('ownerId', e.target.value)}>
-                  <option value="">Not linked yet</option>
-                  {options('owners').map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
-                </select>
+                <div className="flex gap-2">
+                  <select className="field min-w-0 flex-1" value={form.ownerId ?? ''} onChange={(e) => set('ownerId', e.target.value)}>
+                    <option value="">Not linked yet</option>
+                    {options('owners').map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+                  </select>
+                  <button type="button" className="btn btn-ghost shrink-0" onClick={() => setNewOwner({ name: '', phone: '' })}>
+                    + New
+                  </button>
+                </div>
               </Field>
+              {newOwner && (
+                <div className="rounded-xl border border-[var(--line)] bg-[var(--surface-2,#f7f9fc)] p-4 sm:col-span-2">
+                  <div className="flex items-center justify-between">
+                    <p className="font-semibold text-[var(--navy)]">New owner</p>
+                    <button type="button" className="btn btn-ghost" onClick={() => setNewOwner(null)}>Cancel</button>
+                  </div>
+                  <p className="mt-1 text-sm text-[var(--muted)]">
+                    Name and mobile are enough to create the record; the rest can be filled in on the Owners
+                    screen later.
+                  </p>
+                  <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                    <label className="block">
+                      <span className="label">Name</span>
+                      <input className="field" value={newOwner.name} onChange={(e) => setNewOwner({ ...newOwner, name: e.target.value })} />
+                    </label>
+                    <label className="block">
+                      <span className="label">Mobile</span>
+                      <input className="field" inputMode="tel" value={newOwner.phone} onChange={(e) => setNewOwner({ ...newOwner, phone: e.target.value })} />
+                    </label>
+                    <label className="block">
+                      <span className="label">WhatsApp (optional)</span>
+                      <input className="field" inputMode="tel" value={newOwner.whatsapp ?? ''} onChange={(e) => setNewOwner({ ...newOwner, whatsapp: e.target.value })} />
+                    </label>
+                    <label className="block">
+                      <span className="label">Email (optional)</span>
+                      <input className="field" value={newOwner.email ?? ''} onChange={(e) => setNewOwner({ ...newOwner, email: e.target.value })} />
+                    </label>
+                  </div>
+                  <button type="button" className="btn btn-primary mt-3" disabled={busy || !newOwner.name.trim() || !newOwner.phone.trim()} onClick={createOwner}>
+                    {busy ? 'Saving…' : 'Create and link owner'}
+                  </button>
+                </div>
+              )}
+
               <Field label="Assigned to" half>
                 <select className="field" value={form.assignedToId ?? ''} onChange={(e) => set('assignedToId', e.target.value)}>
                   <option value="">Me</option>
@@ -383,9 +534,9 @@ export default function PropertyWizard() {
             </>
           )}
 
-          {step === 5 && <PhotoUploader urls={photos} onChange={setPhotos} />}
+          {step === S.PHOTOS && <PhotoUploader urls={photos} onChange={setPhotos} />}
 
-          {step === 6 && (
+          {step === S.DOCUMENTS && (
             <>
               <div className="sm:col-span-2 space-y-3">
                 {documents.map((document, index) => (
@@ -427,7 +578,7 @@ export default function PropertyWizard() {
             </>
           )}
 
-          {step === 7 && (
+          {step === S.VISIBILITY && (
             <>
               <Field label="List as" half>
                 <select className="field" value={listing.listingType} onChange={(e) => setL('listingType', e.target.value)}>
@@ -460,7 +611,7 @@ export default function PropertyWizard() {
             </>
           )}
 
-          {step === 8 && (
+          {step === S.VERIFICATION && (
             <div className="sm:col-span-2 space-y-3">
               <p className="text-sm text-[var(--muted)]">
                 HN Verified is our own check, not a title guarantee. Tick only what has actually been done.
@@ -489,7 +640,7 @@ export default function PropertyWizard() {
             </div>
           )}
 
-          {step === 9 && (
+          {step === S.PUBLISH && (
             <div className="sm:col-span-2 space-y-4">
               <div>
                 <p className="eyebrow">Summary</p>
@@ -524,7 +675,7 @@ export default function PropertyWizard() {
           )}
         </div>
 
-        {duplicates.length > 0 && step === 1 && (
+        {duplicates.length > 0 && step === S.LOCATION && (
           <div className="mt-5 rounded border border-[var(--brass)] bg-[var(--brass-soft)] p-4">
             <p className="text-sm font-medium">Possible duplicates already on file</p>
             <ul className="mt-2 space-y-1 text-sm">
@@ -541,7 +692,7 @@ export default function PropertyWizard() {
         {error && <p className="mt-4 text-sm text-[var(--danger)]">{error}</p>}
 
         <div className="mt-6 flex items-center justify-between border-t pt-4">
-          <button type="button" className="btn btn-ghost" disabled={step === 0} onClick={() => setStep((s) => s - 1)}>Back</button>
+          <button type="button" className="btn btn-ghost" disabled={step === S.PURPOSE} onClick={() => setStep((s) => s - 1)}>Back</button>
           <p className="mono text-xs text-[var(--muted)]">Step {step + 1} of {STEPS.length}</p>
           {step < STEPS.length - 1 ? (
             <button type="button" className="btn btn-primary" disabled={busy} onClick={next}>

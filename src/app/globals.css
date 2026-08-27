@@ -52,6 +52,22 @@ html { font-size: 13px; }
 /* Nothing should ever push the page sideways. */
 html, body { overflow-x: clip; max-width: 100%; }
 
+/* Google Places autocomplete.
+   The web component and its suggestion list follow the device colour scheme,
+   which rendered white-on-black for anyone with dark mode on. Pinning the scheme
+   and Google's own surface tokens keeps both the input and the dropdown light. */
+gmp-place-autocomplete,
+gmp-basic-place-autocomplete {
+  color-scheme: light;
+  --gmp-mat-color-surface: #ffffff;
+  --gmp-mat-color-on-surface: #10233c;
+  --gmp-mat-color-on-surface-variant: #405469;
+  --gmp-mat-color-outline-decorative: #d8dee7;
+  --gmp-mat-color-primary: #1583b5;
+  --gmp-mat-color-on-primary: #ffffff;
+  width: 100%;
+}
+
 /* Mobile overflow guard.
    Grid and flex children default to min-width:auto, so anything with a wide
    intrinsic size — a photo strip, a long reference code, a side-by-side input

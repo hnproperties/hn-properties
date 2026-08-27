@@ -31,7 +31,17 @@ const LOOKUPS: Record<string, { permission?: string; load: (q: string) => Promis
         where: { isActive: true, name: q ? { contains: q, mode: 'insensitive' } : undefined },
         orderBy: [{ segment: 'asc' }, { sortOrder: 'asc' }],
         take: 100,
-      })).map((c) => ({ value: c.id, label: `${c.name} · ${c.segment.toLowerCase()}` })),
+      })).map((c) => ({
+        value: c.id,
+        label: `${c.name} · ${c.segment.toLowerCase()}`,
+        // The entry form uses these to decide which detail fields to show, so a
+        // land category never asks for bedrooms and a flat never asks frontage.
+        segment: c.segment,
+        hasBedrooms: c.hasBedrooms,
+        hasFurnishing: c.hasFurnishing,
+        hasFrontage: c.hasFrontage,
+        isLand: c.isLand,
+      })),
   },
   locations: {
     load: async (q) =>
