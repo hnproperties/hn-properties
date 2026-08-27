@@ -90,14 +90,14 @@ export default function SiteHeader() {
             alt=""
             width={80}
             height={80}
-            className="h-10 w-10 shrink-0 object-contain transition-transform duration-500 group-hover:scale-105 xl:h-14 xl:w-14"
+            className="h-12 w-12 shrink-0 object-contain drop-shadow-[0_0_5px_rgba(21,131,181,0.45)] transition-transform duration-500 group-hover:scale-105 xl:h-14 xl:w-14 xl:drop-shadow-none"
             priority
           />
           {/* min-w-0 + truncate on the tagline: if the nav ever needs more room,
               this line shortens instead of the nav overflowing into the buttons
               on the right, which is what caused the overlap before. */}
           <span className="min-w-0 leading-tight">
-            <span className="display block truncate text-[15px] text-[var(--navy)] sm:text-[17px] xl:whitespace-nowrap xl:text-[19px]">HN PROPERTIES</span>
+            <span className="display block truncate text-[17px] text-[var(--navy)] sm:text-[18px] xl:whitespace-nowrap xl:text-[19px]">HN PROPERTIES</span>
             <span className="hidden truncate text-sm text-[var(--muted)] sm:block xl:hidden 2xl:block">{site.city} Property Marketplace</span>
           </span>
         </Link>
@@ -205,7 +205,7 @@ export default function SiteHeader() {
             alt=""
             width={1000}
             height={563}
-            className="h-11 w-auto"
+            className="h-10 w-auto drop-shadow-[0_0_5px_rgba(255,120,40,0.5)]"
           />
         </Link>
 

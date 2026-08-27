@@ -3,6 +3,7 @@ import PropertyCard from '@/components/PropertyCard';
 import HeroSearch from '@/components/HeroSearch';
 import { getFeatured, getRecent, getComingSoon, getPublicIndexes, getLocationsWithInventory } from '@/lib/public-data';
 import { site } from '@/lib/constants';
+import { PhoneIcon } from '@/components/SocialIcons';
 
 export const revalidate = 300;
 
@@ -80,7 +81,13 @@ export default async function HomePage() {
           {/* Action panel */}
           <div className="glass-dark animate-rise-2 p-5 shadow-2xl">
             <p className="text-sm text-white/70">Talk to {site.name}</p>
-            <a href={`tel:${site.phone}`} className="display block text-3xl">📞 {site.phone}</a>
+            <a href={`tel:${site.phone}`} className="display block text-3xl">
+              <span className="inline-flex items-center gap-2 lg:hidden">
+                <PhoneIcon className="h-7 w-7 text-[#ff3d7f]" />
+                {site.phone}
+              </span>
+              <span className="hidden lg:inline">📞 {site.phone}</span>
+            </a>
             <p className="mt-1 text-xs text-white/60">Your trusted property consultant</p>
 
             <div className="mt-4 space-y-2">
