@@ -10,7 +10,9 @@ import { InstagramIcon, WhatsAppIcon, PhoneIcon } from './SocialIcons';
 type NavItem = {
   href: string;
   label: string;
-  accent?: 'fire' | 'gold';
+  accent?: 'gold';
+  /** Rendered as the Hot Deals artwork rather than a styled text label. */
+  artwork?: boolean;
   children?: { href: string; label: string; hint: string }[];
 };
 
@@ -36,16 +38,23 @@ const NAV: NavItem[] = [
       { href: '/give-on-rent', label: 'Give on Rent', hint: 'Find a screened tenant' },
     ],
   },
-  { href: '/hot-deals', label: '🔥 Hot Deals', accent: 'fire' },
+  { href: '/hot-deals', label: 'Hot Deals', artwork: true },
   { href: '/wanted', label: '🥇 Property Demand', accent: 'gold' },
   { href: '/about', label: 'About' },
   { href: '/contact', label: 'Contact' },
 ];
 
 const ACCENT_CLASS = {
-  fire: 'bg-gradient-to-r from-[#e8590c] to-[#f08c00] text-white shadow-[0_4px_14px_-4px_rgba(232,89,12,0.65)] hover:-translate-y-0.5 hover:shadow-[0_6px_18px_-4px_rgba(232,89,12,0.75)]',
-  gold: 'bg-gradient-to-r from-[#b8860b] to-[#d4a017] text-white shadow-[0_4px_14px_-4px_rgba(184,134,11,0.6)] hover:-translate-y-0.5 hover:shadow-[0_6px_18px_-4px_rgba(184,134,11,0.7)]',
+  gold: 'border border-white/70 bg-white/55 backdrop-blur-md text-[var(--navy)] shadow-[inset_0_1px_0_rgba(255,255,255,0.95),0_4px_14px_-5px_rgba(15,42,80,0.28)] hover:-translate-y-0.5 hover:bg-white/85',
 } as const;
+
+/** Frosted pill shared by the plain nav items and the dropdown trigger. */
+const GLASS =
+  'border border-white/60 bg-white/45 backdrop-blur-md text-[var(--ink-soft)] shadow-[inset_0_1px_0_rgba(255,255,255,0.85),0_2px_10px_-4px_rgba(15,42,80,0.18)] hover:-translate-y-0.5 hover:bg-white/75 hover:text-[var(--brand)]';
+
+/** The same glass, tinted to brand blue, for the current page. */
+const GLASS_ACTIVE =
+  'border border-white/40 bg-gradient-to-b from-[#3ea3d0] to-[#1583b5] text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.5),0_6px_18px_-6px_rgba(21,131,181,0.75)]';
 
 export default function SiteHeader() {
   const [open, setOpen] = useState(false);
@@ -60,7 +69,7 @@ export default function SiteHeader() {
   }, [pathname]);
 
   return (
-    <header className="sticky top-0 z-40 border-b bg-white">
+    <header className="sticky top-0 z-40 border-b border-white/50 bg-white/70 backdrop-blur-xl backdrop-saturate-150">
       <div className="wrap flex h-[68px] items-center justify-between gap-4">
         {/* whitespace-nowrap throughout: at narrower widths the labels were breaking
             across three lines and pushing the whole header out of shape. */}
@@ -82,19 +91,19 @@ export default function SiteHeader() {
           </span>
         </Link>
 
-        <nav className="hidden min-w-0 flex-1 items-center justify-center gap-1 xl:flex 2xl:gap-2">
+        <nav className="hidden min-w-0 flex-1 items-center justify-center gap-2 xl:flex 2xl:gap-3">
           {NAV.map((item) => {
             const active = item.href === '/' ? pathname === '/' : pathname.startsWith(item.href);
             const accent = item.accent ? ACCENT_CLASS[item.accent] : null;
             const childActive = item.children?.some((c) => pathname.startsWith(c.href));
 
             const base =
-              'whitespace-nowrap rounded-lg px-2.5 py-2 text-sm font-medium transition duration-300 2xl:px-3';
+              'whitespace-nowrap rounded-xl px-4 py-2.5 text-[15px] font-semibold transition duration-300 2xl:px-5';
             const stateClass = accent
-              ? `${accent} ${active ? 'ring-2 ring-[var(--navy)] ring-offset-1' : ''}`
+              ? `${accent} ${active ? 'ring-2 ring-white/70 ring-offset-2 ring-offset-transparent' : ''}`
               : active || childActive
-                ? 'bg-[var(--brand)] text-white shadow-[0_4px_14px_-4px_rgba(21,131,181,0.6)]'
-                : 'text-[var(--ink-soft)] hover:-translate-y-0.5 hover:bg-[var(--brand-soft)] hover:text-[var(--brand)]';
+                ? GLASS_ACTIVE
+                : GLASS;
 
             if (item.children) {
               const isOpen = dropdown === item.href;
@@ -121,7 +130,7 @@ export default function SiteHeader() {
                       className="absolute left-1/2 top-full z-50 w-64 -translate-x-1/2 pt-2"
                       role="menu"
                     >
-                      <div className="plate overflow-hidden p-1.5 shadow-[var(--shadow-lift)]">
+                      <div className="overflow-hidden rounded-2xl border border-white/60 bg-white/80 p-1.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.9),0_18px_40px_-12px_rgba(15,42,80,0.35)] backdrop-blur-xl">
                         {item.children.map((child) => (
                           <Link
                             key={child.href}
@@ -142,6 +151,30 @@ export default function SiteHeader() {
                     </div>
                   )}
                 </div>
+              );
+            }
+
+            if (item.artwork) {
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  aria-label={item.label}
+                  className={`shrink-0 rounded-xl px-1 transition duration-300 hover:-translate-y-0.5 hover:scale-105 ${
+                    active ? 'ring-2 ring-[#ff5a00]/60 ring-offset-2 ring-offset-transparent' : ''
+                  }`}
+                >
+                  {/* The artwork carries its own colour and depth, so it needs no
+                      pill behind it — just a soft shadow to lift it off the glass. */}
+                  <Image
+                    src="/hot-deals-banner.png"
+                    alt=""
+                    width={1000}
+                    height={563}
+                    priority
+                    className="h-11 w-auto drop-shadow-[0_3px_8px_rgba(220,38,0,0.45)] 2xl:h-12"
+                  />
+                </Link>
               );
             }
 
@@ -221,18 +254,30 @@ export default function SiteHeader() {
                     </Link>
                   ))
                 : [
-                    <Link
-                      key={item.href}
-                      href={item.href}
-                      onClick={() => setOpen(false)}
-                      className={
-                        item.accent
-                          ? `col-span-2 rounded-lg px-3 py-3 text-center font-semibold ${ACCENT_CLASS[item.accent]}`
-                          : 'rounded-lg px-3 py-3 hover:bg-[var(--brand-soft)]'
-                      }
-                    >
-                      {item.label}
-                    </Link>,
+                    item.artwork ? (
+                      <Link
+                        key={item.href}
+                        href={item.href}
+                        aria-label={item.label}
+                        onClick={() => setOpen(false)}
+                        className="col-span-2 flex justify-center py-2"
+                      >
+                        <Image src="/hot-deals-banner.png" alt="" width={1000} height={563} className="h-14 w-auto" />
+                      </Link>
+                    ) : (
+                      <Link
+                        key={item.href}
+                        href={item.href}
+                        onClick={() => setOpen(false)}
+                        className={
+                          item.accent
+                            ? `col-span-2 rounded-lg px-3 py-3 text-center font-semibold ${ACCENT_CLASS[item.accent]}`
+                            : 'rounded-lg px-3 py-3 hover:bg-[var(--brand-soft)]'
+                        }
+                      >
+                        {item.label}
+                      </Link>
+                    ),
                   ],
             )}
             <Link
