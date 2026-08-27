@@ -260,17 +260,6 @@ export default function SiteHeader() {
             Post Your Property
           </Link>
 
-          <Link
-            href="/search"
-            aria-label="Search by property code"
-            className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-white/80 bg-gradient-to-br from-white to-[#e9edf3] text-[var(--navy)] shadow-[3px_3px_8px_rgba(163,177,198,0.45),-3px_-3px_8px_rgba(255,255,255,0.95)] xl:hidden"
-          >
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-5 w-5">
-              <circle cx="11" cy="11" r="7" />
-              <path d="m20 20-3.5-3.5" strokeLinecap="round" />
-            </svg>
-          </Link>
-
           <button
             type="button"
             className="btn btn-ghost xl:hidden"
