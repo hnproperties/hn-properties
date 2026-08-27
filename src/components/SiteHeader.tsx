@@ -3,27 +3,41 @@
 import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname } from 'next/navigation';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { site, waLink } from '@/lib/constants';
 import { InstagramIcon, WhatsAppIcon, PhoneIcon } from './SocialIcons';
+
+type NavItem = {
+  href: string;
+  label: string;
+  accent?: 'fire' | 'gold';
+  children?: { href: string; label: string; hint: string }[];
+};
 
 /**
  * `accent` marks the two shelves we want people to notice: Property Demand
  * (buyers already looking) and Hot Deals. They render as solid coloured buttons
- * in every state rather than plain text links, so they read as calls to action
- * instead of ordinary navigation.
+ * rather than plain text links, so they read as calls to action.
+ *
+ * `children` turns an item into a dropdown. Buy / Rent / Sell / Give on Rent are
+ * four halves of one idea, so they sit under a single "Properties" trigger — six
+ * top-level items instead of nine, which is what lets the two accent buttons fit
+ * without crowding the header.
  */
-const NAV = [
+const NAV: NavItem[] = [
   { href: '/', label: 'Home' },
-  { href: '/buy', label: 'Buy' },
-  { href: '/rent', label: 'Rent' },
-  // menuOnly: kept out of the desktop bar for room, but still in the mobile menu
-  // and the footer. The "Post Your Property" button covers both journeys anyway.
-  { href: '/sell', label: 'Sell', menuOnly: true },
-  { href: '/give-on-rent', label: 'Give on Rent', menuOnly: true },
-  { href: '/hot-deals', label: '🔥 Hot Deals', accent: 'fire' as const },
-  { href: '/wanted', label: '🥇 Property Demand', accent: 'gold' as const },
-  { href: '/requirement', label: 'Requirements' },
+  {
+    href: '/properties',
+    label: 'Properties',
+    children: [
+      { href: '/buy', label: 'Buy', hint: 'Find your next home or investment' },
+      { href: '/rent', label: 'Rent', hint: 'Residential and commercial rentals' },
+      { href: '/sell', label: 'Sell', hint: 'List your property for sale' },
+      { href: '/give-on-rent', label: 'Give on Rent', hint: 'Find a screened tenant' },
+    ],
+  },
+  { href: '/hot-deals', label: '🔥 Hot Deals', accent: 'fire' },
+  { href: '/wanted', label: '🥇 Property Demand', accent: 'gold' },
   { href: '/about', label: 'About' },
   { href: '/contact', label: 'Contact' },
 ];
@@ -35,7 +49,15 @@ const ACCENT_CLASS = {
 
 export default function SiteHeader() {
   const [open, setOpen] = useState(false);
+  const [dropdown, setDropdown] = useState<string | null>(null);
   const pathname = usePathname();
+
+  // Close both menus whenever the route changes. Without this, navigating from
+  // inside the dropdown leaves it hanging open over the new page.
+  useEffect(() => {
+    setDropdown(null);
+    setOpen(false);
+  }, [pathname]);
 
   return (
     <header className="sticky top-0 z-40 border-b bg-white">
@@ -56,26 +78,75 @@ export default function SiteHeader() {
               on the right, which is what caused the overlap before. */}
           <span className="min-w-0 leading-tight">
             <span className="display block whitespace-nowrap text-xl text-[var(--navy)]">HN PROPERTIES</span>
-            <span className="block truncate text-sm text-[var(--muted)]">{site.city} Property Marketplace</span>
+            <span className="block truncate text-sm text-[var(--muted)] xl:hidden 2xl:block">{site.city} Property Marketplace</span>
           </span>
         </Link>
 
-        <nav className="hidden min-w-0 flex-1 items-center justify-center gap-1 2xl:flex 2xl:gap-2">
-          {NAV.filter((item) => !item.menuOnly).map((item) => {
+        <nav className="hidden min-w-0 flex-1 items-center justify-center gap-1 xl:flex 2xl:gap-2">
+          {NAV.map((item) => {
             const active = item.href === '/' ? pathname === '/' : pathname.startsWith(item.href);
             const accent = item.accent ? ACCENT_CLASS[item.accent] : null;
+            const childActive = item.children?.some((c) => pathname.startsWith(c.href));
+
+            const base =
+              'whitespace-nowrap rounded-lg px-2.5 py-2 text-sm font-medium transition duration-300 2xl:px-3';
+            const stateClass = accent
+              ? `${accent} ${active ? 'ring-2 ring-[var(--navy)] ring-offset-1' : ''}`
+              : active || childActive
+                ? 'bg-[var(--brand)] text-white shadow-[0_4px_14px_-4px_rgba(21,131,181,0.6)]'
+                : 'text-[var(--ink-soft)] hover:-translate-y-0.5 hover:bg-[var(--brand-soft)] hover:text-[var(--brand)]';
+
+            if (item.children) {
+              const isOpen = dropdown === item.href;
+              return (
+                <div
+                  key={item.href}
+                  className="relative"
+                  onMouseEnter={() => setDropdown(item.href)}
+                  onMouseLeave={() => setDropdown(null)}
+                >
+                  <button
+                    type="button"
+                    aria-expanded={isOpen}
+                    aria-haspopup="true"
+                    onClick={() => setDropdown(isOpen ? null : item.href)}
+                    className={`${base} ${stateClass} inline-flex items-center gap-1`}
+                  >
+                    {item.label}
+                    <span aria-hidden className={`text-[10px] transition-transform ${isOpen ? 'rotate-180' : ''}`}>▼</span>
+                  </button>
+
+                  {isOpen && (
+                    <div
+                      className="absolute left-1/2 top-full z-50 w-64 -translate-x-1/2 pt-2"
+                      role="menu"
+                    >
+                      <div className="plate overflow-hidden p-1.5 shadow-[var(--shadow-lift)]">
+                        {item.children.map((child) => (
+                          <Link
+                            key={child.href}
+                            href={child.href}
+                            role="menuitem"
+                            onClick={() => setDropdown(null)}
+                            className={`block rounded-lg px-3 py-2.5 transition ${
+                              pathname.startsWith(child.href)
+                                ? 'bg-[var(--brand-soft)] text-[var(--brand)]'
+                                : 'hover:bg-[var(--brand-soft)]'
+                            }`}
+                          >
+                            <span className="block text-sm font-semibold text-[var(--navy)]">{child.label}</span>
+                            <span className="block text-xs text-[var(--muted)]">{child.hint}</span>
+                          </Link>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            }
+
             return (
-              <Link
-                key={item.href}
-                href={item.href}
-                className={`whitespace-nowrap rounded-lg px-3 py-2 text-sm font-medium transition duration-300 ${
-                  accent
-                    ? `${accent} ${active ? 'ring-2 ring-[var(--navy)] ring-offset-1' : ''}`
-                    : active
-                      ? 'bg-[var(--brand)] text-white shadow-[0_4px_14px_-4px_rgba(21,131,181,0.6)]'
-                      : 'text-[var(--ink-soft)] hover:-translate-y-0.5 hover:bg-[var(--brand-soft)] hover:text-[var(--brand)]'
-                }`}
-              >
+              <Link key={item.href} href={item.href} className={`${base} ${stateClass}`}>
                 {item.label}
               </Link>
             );
@@ -89,7 +160,7 @@ export default function SiteHeader() {
               target="_blank"
               rel="noopener noreferrer"
               aria-label="Follow HN Properties on Instagram"
-              className="hidden h-11 w-11 items-center justify-center rounded-xl bg-gradient-to-br from-[#f9ce34] via-[#ee2a7b] to-[#6228d7] text-white shadow-md transition duration-300 hover:-translate-y-0.5 hover:shadow-lg sm:inline-flex"
+              className="hidden h-11 w-11 items-center justify-center rounded-xl bg-gradient-to-br from-[#f9ce34] via-[#ee2a7b] to-[#6228d7] text-white shadow-md transition duration-300 hover:-translate-y-0.5 hover:shadow-lg sm:inline-flex xl:hidden 2xl:inline-flex"
             >
               <InstagramIcon className="h-6 w-6" />
             </a>
@@ -121,7 +192,7 @@ export default function SiteHeader() {
 
           <button
             type="button"
-            className="btn btn-ghost 2xl:hidden"
+            className="btn btn-ghost xl:hidden"
             onClick={() => setOpen((v) => !v)}
             aria-expanded={open}
             aria-controls="site-menu"
@@ -132,22 +203,45 @@ export default function SiteHeader() {
       </div>
 
       {open && (
-        <nav id="site-menu" className="animate-rise border-t bg-white 2xl:hidden">
+        <nav id="site-menu" className="animate-rise border-t bg-white xl:hidden">
           <div className="wrap grid grid-cols-2 gap-1 py-3">
-            {NAV.map((item) => (
-              <Link
-                key={item.href}
-                href={item.href}
-                onClick={() => setOpen(false)}
-                className={
-                  item.accent
-                    ? `col-span-2 rounded-lg px-3 py-3 text-center font-semibold ${ACCENT_CLASS[item.accent]}`
-                    : 'rounded-lg px-3 py-3 hover:bg-[var(--brand-soft)]'
-                }
-              >
-                {item.label}
-              </Link>
-            ))}
+            {/* A dropdown has no room to open inside the mobile sheet, so parents
+                are flattened into their children — every destination stays one tap
+                away rather than two. */}
+            {NAV.flatMap((item) =>
+              item.children
+                ? item.children.map((child) => (
+                    <Link
+                      key={child.href}
+                      href={child.href}
+                      onClick={() => setOpen(false)}
+                      className="rounded-lg px-3 py-3 hover:bg-[var(--brand-soft)]"
+                    >
+                      {child.label}
+                    </Link>
+                  ))
+                : [
+                    <Link
+                      key={item.href}
+                      href={item.href}
+                      onClick={() => setOpen(false)}
+                      className={
+                        item.accent
+                          ? `col-span-2 rounded-lg px-3 py-3 text-center font-semibold ${ACCENT_CLASS[item.accent]}`
+                          : 'rounded-lg px-3 py-3 hover:bg-[var(--brand-soft)]'
+                      }
+                    >
+                      {item.label}
+                    </Link>,
+                  ],
+            )}
+            <Link
+              href="/requirement"
+              onClick={() => setOpen(false)}
+              className="rounded-lg px-3 py-3 hover:bg-[var(--brand-soft)]"
+            >
+              Requirements
+            </Link>
             <Link href="/post" onClick={() => setOpen(false)} className="btn btn-primary col-span-2 mt-1">
               Post Your Property
             </Link>
