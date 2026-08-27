@@ -94,7 +94,7 @@ export default function SiteHeader() {
           </span>
         </Link>
 
-        <nav className="hidden min-w-0 flex-1 items-center justify-center gap-3 xl:flex 2xl:gap-4">
+        <nav className="hidden min-w-0 flex-1 items-center justify-center gap-4 xl:flex 2xl:gap-6">
           {NAV.map((item) => {
             const active = item.href === '/' ? pathname === '/' : pathname.startsWith(item.href);
             const accent = item.accent ? ACCENT_CLASS[item.accent] : null;
@@ -175,7 +175,7 @@ export default function SiteHeader() {
                     width={1000}
                     height={563}
                     priority
-                    className="h-9 w-auto drop-shadow-[0_3px_8px_rgba(220,38,0,0.4)] 2xl:h-10"
+                    className="h-11 w-auto drop-shadow-[0_3px_9px_rgba(220,38,0,0.45)] 2xl:h-12"
                   />
                 </Link>
               );
