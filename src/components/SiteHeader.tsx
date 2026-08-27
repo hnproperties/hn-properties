@@ -205,7 +205,7 @@ export default function SiteHeader() {
             alt=""
             width={1000}
             height={563}
-            className="h-8 w-auto drop-shadow-[0_2px_6px_rgba(220,38,0,0.4)]"
+            className="h-11 w-auto drop-shadow-[0_2px_7px_rgba(220,38,0,0.45)]"
           />
         </Link>
 
@@ -305,7 +305,7 @@ export default function SiteHeader() {
                   }`}
                 >
                   {entry.artwork ? (
-                    <Image src="/hot-deals-banner.png" alt="Hot Deals" width={1000} height={563} className="h-7 w-auto" />
+                    <Image src="/hot-deals-banner.png" alt="Hot Deals" width={1000} height={563} className="h-9 w-auto" />
                   ) : (
                     entry.label
                   )}
