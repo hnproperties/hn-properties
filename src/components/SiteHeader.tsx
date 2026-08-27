@@ -94,7 +94,7 @@ export default function SiteHeader() {
           </span>
         </Link>
 
-        <nav className="hidden min-w-0 flex-1 items-center justify-center gap-4 xl:flex 2xl:gap-6">
+        <nav className="hidden min-w-0 flex-1 items-center justify-center gap-6 xl:flex 2xl:gap-8">
           {NAV.map((item) => {
             const active = item.href === '/' ? pathname === '/' : pathname.startsWith(item.href);
             const accent = item.accent ? ACCENT_CLASS[item.accent] : null;
