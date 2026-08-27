@@ -56,6 +56,14 @@ const ACCENT_CLASS = {
 const GLASS =
   'border border-white/80 bg-gradient-to-br from-white to-[#e9edf3] text-[var(--ink-soft)] shadow-[5px_5px_11px_rgba(163,177,198,0.45),-5px_-5px_11px_rgba(255,255,255,0.95),inset_0_1px_0_rgba(255,255,255,0.85)] hover:-translate-y-0.5 hover:text-[var(--brand)] hover:shadow-[7px_7px_14px_rgba(163,177,198,0.5),-7px_-7px_14px_rgba(255,255,255,1),inset_0_1px_0_rgba(255,255,255,0.9)]';
 
+/**
+ * Menu tiles need more definition than the header pills: the sheet behind them
+ * is the same near-white, so a faint blue tint, a firmer border and a deeper
+ * shadow are what separate one tile from the next.
+ */
+const MENU_TILE =
+  'border border-white/90 bg-gradient-to-br from-white to-[#dfe6f0] text-[var(--navy)] shadow-[4px_4px_10px_rgba(120,140,170,0.38),-3px_-3px_8px_rgba(255,255,255,1),inset_0_1px_0_rgba(255,255,255,0.9)] active:scale-[0.97]';
+
 const GLASS_ACTIVE =
   'border border-white/50 bg-[#e6eaf1] text-[var(--brand)] shadow-[inset_4px_4px_9px_rgba(163,177,198,0.6),inset_-4px_-4px_9px_rgba(255,255,255,0.95)]';
 
@@ -282,7 +290,7 @@ export default function SiteHeader() {
                 the old mix of bare links, a centred image and one wide button
                 read as a jumble. Dropdown parents are flattened so nothing is
                 two taps away. */}
-            <div className="grid grid-cols-2 gap-2.5">
+            <div className="grid grid-cols-2 gap-3">
               {NAV.flatMap((item) =>
                 item.children
                   ? item.children.map((child) => ({ href: child.href, label: child.label, artwork: false }))
@@ -292,12 +300,12 @@ export default function SiteHeader() {
                   key={entry.href}
                   href={entry.href}
                   onClick={() => setOpen(false)}
-                  className={`flex min-h-[52px] items-center justify-center rounded-[14px] px-3 py-2.5 text-center text-[14px] font-semibold transition ${
-                    pathname === entry.href ? GLASS_ACTIVE : GLASS
+                  className={`flex min-h-[46px] items-center justify-center rounded-[13px] px-3 py-2 text-center text-[13.5px] font-semibold transition ${
+                    pathname === entry.href ? GLASS_ACTIVE : MENU_TILE
                   }`}
                 >
                   {entry.artwork ? (
-                    <Image src="/hot-deals-banner.png" alt="Hot Deals" width={1000} height={563} className="h-8 w-auto" />
+                    <Image src="/hot-deals-banner.png" alt="Hot Deals" width={1000} height={563} className="h-7 w-auto" />
                   ) : (
                     entry.label
                   )}
@@ -306,7 +314,7 @@ export default function SiteHeader() {
               <Link
                 href="/requirement"
                 onClick={() => setOpen(false)}
-                className={`flex min-h-[52px] items-center justify-center rounded-[14px] px-3 py-2.5 text-center text-[14px] font-semibold transition ${GLASS}`}
+                className={`flex min-h-[46px] items-center justify-center rounded-[13px] px-3 py-2 text-center text-[13.5px] font-semibold transition ${MENU_TILE}`}
               >
                 Requirements
               </Link>

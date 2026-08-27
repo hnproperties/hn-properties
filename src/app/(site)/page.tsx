@@ -21,13 +21,12 @@ const TRUST = [
   { icon: '🔑', title: 'End to End Support', body: 'From first search to possession', tint: 'bg-[#eae7fb]' },
 ];
 
-/** `short` is the two-word label used by the compact mobile tiles. */
 const ACTIONS = [
-  { href: '/buy', icon: '🏠', title: 'Buy Property', short: 'Buy', body: 'Find your next home or investment' },
-  { href: '/rent', icon: '🔑', title: 'Rent Property', short: 'Rent', body: 'Residential and commercial rentals' },
-  { href: '/sell', icon: '🏷️', title: 'Sell Property', short: 'Sell', body: 'List your property for sale' },
-  { href: '/give-on-rent', icon: '📋', title: 'Give on Rent', short: 'Give on Rent', body: 'Find a screened tenant' },
-  { href: '/requirement', icon: '🔎', title: 'Submit Requirement', short: 'Requirement', body: 'Tell us exactly what you need' },
+  { href: '/buy', icon: '🏠', title: 'Buy Property', body: 'Find your next home or investment' },
+  { href: '/rent', icon: '🔑', title: 'Rent Property', body: 'Residential and commercial rentals' },
+  { href: '/sell', icon: '🏷️', title: 'Sell Property', body: 'List your property for sale' },
+  { href: '/give-on-rent', icon: '📋', title: 'Give on Rent', body: 'Find a screened tenant' },
+  { href: '/requirement', icon: '🔎', title: 'Submit Requirement', body: 'Tell us exactly what you need' },
 ];
 
 export default async function HomePage() {
@@ -79,32 +78,12 @@ export default async function HomePage() {
           </div>
 
           {/* Action panel */}
-          <div className="glass-dark animate-rise-2 p-5 shadow-2xl max-lg:rounded-2xl max-lg:border-white/60 max-lg:bg-white max-lg:p-4">
-            <p className="text-sm text-white/70 max-lg:text-[var(--muted)]">Talk to {site.name}</p>
-            <a href={`tel:${site.phone}`} className="display block text-3xl max-lg:text-2xl max-lg:text-[var(--navy)]">📞 {site.phone}</a>
-            <p className="mt-1 text-xs text-white/60 max-lg:text-[var(--muted)]">Your trusted property consultant</p>
+          <div className="glass-dark animate-rise-2 p-5 shadow-2xl">
+            <p className="text-sm text-white/70">Talk to {site.name}</p>
+            <a href={`tel:${site.phone}`} className="display block text-3xl">📞 {site.phone}</a>
+            <p className="mt-1 text-xs text-white/60">Your trusted property consultant</p>
 
-            {/*
-              Phones get five compact tiles in a row — icon over a short label —
-              so the whole panel is glanceable without scrolling. From sm up the
-              original wide rows return, where there is room for the descriptions.
-            */}
-            <div className="mt-4 grid grid-cols-5 gap-1.5 sm:hidden">
-              {ACTIONS.map((item) => (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  className="flex min-w-0 flex-col items-center justify-start gap-1.5 rounded-xl border border-[var(--line)] bg-white px-0.5 py-3 text-center shadow-sm transition active:scale-95"
-                >
-                  <span className="text-xl leading-none">{item.icon}</span>
-                  <span className="hyphens-auto break-words text-[9.5px] font-semibold leading-[1.15] text-[var(--navy)]">
-                    {item.title}
-                  </span>
-                </Link>
-              ))}
-            </div>
-
-            <div className="mt-4 hidden space-y-2 sm:block">
+            <div className="mt-4 space-y-2">
               {ACTIONS.map((item) => (
                 <Link
                   key={item.href}
@@ -142,7 +121,7 @@ export default async function HomePage() {
       </section>
 
       {/* Search panel, overlapping the hero */}
-      <section className="wrap animate-rise-3 relative z-30 -mt-10">
+      <section className="wrap animate-rise-3 relative z-30 -mt-10 max-lg:mt-5">
         <HeroSearch categories={indexes.categories} locations={indexes.locations} />
       </section>
 
