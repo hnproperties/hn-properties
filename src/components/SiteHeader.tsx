@@ -130,7 +130,7 @@ export default function SiteHeader() {
 
                   {isOpen && (
                     <div
-                      className="absolute left-1/2 top-full z-50 w-64 -translate-x-1/2 pt-2"
+                      className="absolute left-1/2 top-full z-50 w-80 -translate-x-1/2 pt-2"
                       role="menu"
                     >
                       <div className="overflow-hidden rounded-2xl border border-white/80 bg-gradient-to-br from-white to-[#eaeef4] p-2 shadow-[8px_8px_20px_rgba(163,177,198,0.5),-8px_-8px_20px_rgba(255,255,255,0.95),inset_0_1px_0_rgba(255,255,255,0.9)] backdrop-blur-xl">
@@ -140,14 +140,14 @@ export default function SiteHeader() {
                             href={child.href}
                             role="menuitem"
                             onClick={() => setDropdown(null)}
-                            className={`block rounded-lg px-3 py-2.5 transition ${
+                            className={`block rounded-xl px-4 py-3 transition ${
                               pathname.startsWith(child.href)
-                                ? 'bg-[var(--brand-soft)] text-[var(--brand)]'
+                                ? 'bg-[var(--brand-soft)]'
                                 : 'hover:bg-[var(--brand-soft)]'
                             }`}
                           >
-                            <span className="block text-sm font-semibold text-[var(--navy)]">{child.label}</span>
-                            <span className="block text-xs text-[var(--muted)]">{child.hint}</span>
+                            <span className="block text-[17px] font-semibold text-[var(--navy)]">{child.label}</span>
+                            <span className="mt-0.5 block text-[13.5px] leading-snug text-[var(--ink-soft)]">{child.hint}</span>
                           </Link>
                         ))}
                       </div>
