@@ -177,7 +177,7 @@ export default function HeroSearch({ locations }: { categories?: Option[]; locat
         ))}
       </div>
 
-      <div className="flex flex-wrap items-end gap-3 p-4">
+      <div className="grid grid-cols-1 gap-3 p-4 lg:flex lg:flex-wrap lg:items-end">
         <Field label="Property Type">
           <select
             className="field"
@@ -251,7 +251,7 @@ export default function HeroSearch({ locations }: { categories?: Option[]; locat
           </select>
         </Field>
 
-        <div className="flex items-end">
+        <div className="flex items-end max-lg:mt-1">
           <button type="button" className="btn btn-navy w-full px-10 lg:w-auto" onClick={search}>
             🔍 Search
           </button>
