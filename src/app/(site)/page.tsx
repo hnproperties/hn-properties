@@ -51,15 +51,18 @@ export default async function HomePage() {
             <p className="text-shadow-hero mt-4 text-xl font-semibold text-white">Buy • Rent • Sell • Give on Rent</p>
             <p className="text-shadow-hero mt-2 text-lg text-white/85">Your trusted property consultant — {site.name}</p>
 
-            <div className="mt-6 flex flex-wrap gap-2">
+            <div className="mt-6 grid grid-cols-3 gap-2 max-lg:text-center lg:flex lg:flex-wrap">
               {['✓ Verified Properties', `📍 Local ${site.city} Expertise`, '👤 Personalised Assistance'].map((chip) => (
-                <span key={chip} className="rounded-full border border-white/40 bg-black/25 px-4 py-2 text-base text-white transition duration-300 hover:-translate-y-0.5 hover:bg-black/35">
+                <span
+                  key={chip}
+                  className="flex items-center justify-center rounded-xl border border-white/40 bg-black/25 px-2 py-2 text-[12px] leading-tight text-white transition duration-300 hover:-translate-y-0.5 hover:bg-black/35 lg:rounded-full lg:px-4 lg:text-base"
+                >
                   {chip}
                 </span>
               ))}
             </div>
 
-            <dl className="mt-8 flex gap-10 border-t border-white/15 pt-5">
+            <dl className="mt-8 hidden gap-10 border-t border-white/15 pt-5 lg:flex">
               <div>
                 <dt className="text-xs uppercase tracking-[0.12em] text-white/75">For sale</dt>
                 <dd className="display text-shadow-hero text-4xl">{indexes.counts.SALE ?? 0}</dd>
@@ -76,10 +79,10 @@ export default async function HomePage() {
           </div>
 
           {/* Action panel */}
-          <div className="glass-dark animate-rise-2 p-5 shadow-2xl">
-            <p className="text-sm text-white/70">Talk to {site.name}</p>
-            <a href={`tel:${site.phone}`} className="display block text-3xl">📞 {site.phone}</a>
-            <p className="mt-1 text-xs text-white/60">Your trusted property consultant</p>
+          <div className="glass-dark animate-rise-2 p-5 shadow-2xl max-lg:rounded-2xl max-lg:border-white/60 max-lg:bg-white max-lg:p-4">
+            <p className="text-sm text-white/70 max-lg:text-[var(--muted)]">Talk to {site.name}</p>
+            <a href={`tel:${site.phone}`} className="display block text-3xl max-lg:text-2xl max-lg:text-[var(--navy)]">📞 {site.phone}</a>
+            <p className="mt-1 text-xs text-white/60 max-lg:text-[var(--muted)]">Your trusted property consultant</p>
 
             {/*
               Phones get five compact tiles in a row — icon over a short label —
@@ -91,10 +94,12 @@ export default async function HomePage() {
                 <Link
                   key={item.href}
                   href={item.href}
-                  className="flex min-w-0 flex-col items-center gap-1 rounded-xl bg-white px-1 py-2.5 text-center transition active:scale-95"
+                  className="flex min-w-0 flex-col items-center justify-start gap-1.5 rounded-xl border border-[var(--line)] bg-white px-0.5 py-3 text-center shadow-sm transition active:scale-95"
                 >
-                  <span className="text-lg leading-none">{item.icon}</span>
-                  <span className="text-[10.5px] font-semibold leading-tight text-[var(--navy)]">{item.short}</span>
+                  <span className="text-xl leading-none">{item.icon}</span>
+                  <span className="hyphens-auto break-words text-[9.5px] font-semibold leading-[1.15] text-[var(--navy)]">
+                    {item.title}
+                  </span>
                 </Link>
               ))}
             </div>
@@ -115,6 +120,24 @@ export default async function HomePage() {
               ))}
             </div>
           </div>
+
+          {/* Counts sit below the action card on phones, in their own bordered
+              panel, matching the reference. On desktop they stay in the left
+              column beneath the headline, so nothing changes there. */}
+          <dl className="grid grid-cols-3 rounded-2xl border border-white/20 bg-black/25 py-4 text-center lg:hidden">
+            <div>
+              <dt className="text-[11px] uppercase tracking-[0.12em] text-white/70">For sale</dt>
+              <dd className="display text-shadow-hero mt-1 text-2xl">{indexes.counts.SALE ?? 0}</dd>
+            </div>
+            <div className="border-x border-white/15">
+              <dt className="text-[11px] uppercase tracking-[0.12em] text-white/70">On rent</dt>
+              <dd className="display text-shadow-hero mt-1 text-2xl">{(indexes.counts.RENT ?? 0) + (indexes.counts.LEASE ?? 0)}</dd>
+            </div>
+            <div>
+              <dt className="text-[11px] uppercase tracking-[0.12em] text-white/70">Localities</dt>
+              <dd className="display text-shadow-hero mt-1 text-2xl">{localities.length}</dd>
+            </div>
+          </dl>
         </div>
       </section>
 

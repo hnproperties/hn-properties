@@ -180,12 +180,15 @@ body {
   }
 
   @media (max-width: 1024px) {
-    /* On a phone the panel sits over the middle of the photo, so darken further. */
+    /* A diagonal wash rather than a flat one: heaviest behind the headline at
+       top-left and easing off towards the right, so the building stays visible
+       instead of the whole hero reading as a navy block. The action card below
+       is opaque on phones, so the lower half no longer needs shading. */
     .hero-band {
       background-image:
-        linear-gradient(180deg, rgba(9, 35, 67, 0.82) 0%, rgba(9, 35, 67, 0.74) 55%, rgba(9, 35, 67, 0.86) 100%),
+        linear-gradient(158deg, rgba(9, 35, 67, 0.92) 0%, rgba(9, 35, 67, 0.72) 38%, rgba(9, 35, 67, 0.42) 68%, rgba(9, 35, 67, 0.28) 100%),
         url('/hero.jpg');
-      background-position: center, center 30%;
+      background-position: center, center 28%;
     }
   }
 
