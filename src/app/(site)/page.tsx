@@ -51,13 +51,20 @@ export default async function HomePage() {
             <p className="text-shadow-hero mt-4 text-xl font-semibold text-white">Buy • Rent • Sell • Give on Rent</p>
             <p className="text-shadow-hero mt-2 text-lg text-white/85">Your trusted property consultant — {site.name}</p>
 
-            <div className="mt-6 grid grid-cols-3 gap-2 max-lg:text-center lg:flex lg:flex-wrap">
-              {['✓ Verified Properties', `📍 Local ${site.city} Expertise`, '👤 Personalised Assistance'].map((chip) => (
+            {/* Icon centred above the label on phones so all three boxes match in
+                height and the text sits evenly; the inline pills return at lg. */}
+            <div className="mt-6 grid grid-cols-3 items-stretch gap-2 lg:flex lg:flex-wrap">
+              {[
+                { icon: '✓', label: 'Verified Properties' },
+                { icon: '📍', label: `Local ${site.city} Expertise` },
+                { icon: '👤', label: 'Personalised Assistance' },
+              ].map((chip) => (
                 <span
-                  key={chip}
-                  className="flex items-center justify-center rounded-xl border border-white/40 bg-black/25 px-2 py-2 text-[12px] leading-tight text-white transition duration-300 hover:-translate-y-0.5 hover:bg-black/35 lg:rounded-full lg:px-4 lg:text-base"
+                  key={chip.label}
+                  className="flex flex-col items-center justify-start gap-1.5 rounded-xl border border-white/40 bg-black/25 px-2 py-3 text-center text-[12px] leading-tight text-white transition duration-300 hover:-translate-y-0.5 hover:bg-black/35 lg:flex-row lg:gap-2 lg:rounded-full lg:px-4 lg:py-2 lg:text-base"
                 >
-                  {chip}
+                  <span className="text-base leading-none lg:text-inherit">{chip.icon}</span>
+                  <span className="text-balance">{chip.label}</span>
                 </span>
               ))}
             </div>

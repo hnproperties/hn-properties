@@ -85,14 +85,16 @@ export default function SiteHeader() {
         {/* whitespace-nowrap throughout: at narrower widths the labels were breaking
             across three lines and pushing the whole header out of shape. */}
         <Link href="/" className="group flex min-w-0 shrink items-center gap-2 xl:shrink-0 xl:gap-3">
-          <Image
-            src="/logo.png"
-            alt=""
-            width={80}
-            height={80}
-            className="h-12 w-12 shrink-0 object-contain drop-shadow-[0_0_5px_rgba(21,131,181,0.45)] transition-transform duration-500 group-hover:scale-105 xl:h-14 xl:w-14 xl:drop-shadow-none"
-            priority
-          />
+          <span className="shrink-0 rounded-xl bg-white p-1 shadow-sm xl:rounded-none xl:bg-transparent xl:p-0 xl:shadow-none">
+            <Image
+              src="/logo.png"
+              alt=""
+              width={80}
+              height={80}
+              className="h-12 w-12 object-contain transition-transform duration-500 group-hover:scale-105 xl:h-14 xl:w-14"
+              priority
+            />
+          </span>
           {/* min-w-0 + truncate on the tagline: if the nav ever needs more room,
               this line shortens instead of the nav overflowing into the buttons
               on the right, which is what caused the overlap before. */}
