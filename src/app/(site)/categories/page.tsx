@@ -40,7 +40,7 @@ export default async function CategoriesPage() {
                 <span className={`flex h-14 w-14 items-center justify-center rounded-2xl text-2xl ${segment.tint}`}>{segment.icon}</span>
                 <div className="flex-1">
                   <h2 className="display text-2xl text-[var(--navy)]">{segment.title}</h2>
-                  <p className="text-[var(--muted)]">{segment.body}</p>
+                  <p className="hidden text-[var(--muted)] lg:block">{segment.body}</p>
                 </div>
                 <Link href={`/buy?segment=${segment.key}`} className="btn btn-ghost">
                   {count} live {count === 1 ? 'listing' : 'listings'}

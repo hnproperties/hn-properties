@@ -205,7 +205,7 @@ export default function SiteHeader() {
             alt=""
             width={1000}
             height={563}
-            className="h-11 w-auto drop-shadow-[0_2px_7px_rgba(220,38,0,0.45)]"
+            className="h-11 w-auto"
           />
         </Link>
 
