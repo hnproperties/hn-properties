@@ -15,7 +15,7 @@ export default function SiteVisitsPage() {
       columns={[
         { key: 'code', label: 'Code', type: 'mono' },
         { key: 'scheduledAt', label: 'When', type: 'datetime' },
-        { key: 'listing.publicId', label: 'Listing', type: 'mono' },
+        { key: 'listing.publicId', label: 'Listing', type: 'property' },
         { key: 'client.name', label: 'Client' },
         { key: 'agent.name', label: 'Agent' },
         { key: 'status', label: 'Status', type: 'badge' },

@@ -725,6 +725,9 @@ enum Priority {
 
 model Lead {
   id       String     @id @default(cuid())
+  // Stamped when someone opens the Leads screen, so the desk highlight clears
+  // once the leads have actually been looked at rather than staying lit.
+  viewedAt DateTime?
   code     String     @unique // LED-0001
   name     String
   phone    String

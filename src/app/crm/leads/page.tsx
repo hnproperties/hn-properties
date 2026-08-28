@@ -1,6 +1,7 @@
 'use client';
 
 import ResourceManager from '@/components/crm/ResourceManager';
+import { useEffect } from 'react';
 import { useCan } from '@/components/crm/CrmShell';
 import Link from 'next/link';
 import { openWhatsApp } from '@/components/crm/ScheduleActions';
@@ -8,6 +9,13 @@ import { toOptions, LEAD_STATUSES, PRIORITIES, SOURCE_TYPES } from '@/lib/consta
 
 export default function LeadsPage() {
   const can = useCan();
+
+  // Opening this screen counts as having seen the new leads, so the desk
+  // highlight clears. Fire-and-forget: if it fails the badge simply stays lit,
+  // which is the safe direction to fail in.
+  useEffect(() => {
+    fetch('/api/leads/mark-viewed', { method: 'POST' }).catch(() => {});
+  }, []);
 
   return (
     <div className="space-y-5">
@@ -19,7 +27,7 @@ export default function LeadsPage() {
             { key: 'code', label: 'Code', type: 'mono' },
             { key: 'name', label: 'Name' },
             { key: 'phone', label: 'Phone', type: 'mono' },
-            { key: 'listing.publicId', label: 'Listing', type: 'mono' },
+            { key: 'listing.publicId', label: 'Listing', type: 'property' },
             { key: 'status', label: 'Status', type: 'badge' },
             { key: 'priority', label: 'Priority', type: 'badge' },
             { key: 'assignedTo.name', label: 'Assigned to' },
@@ -30,10 +38,16 @@ export default function LeadsPage() {
               {/* Prefilled links rather than inline forms: the follow-up and visit
                   screens already validate and save these properly, so this just
                   carries the lead across instead of duplicating those forms. */}
-              <Link href={`/crm/follow-ups?new=1&leadId=${row.id}`} className="btn btn-ghost">
+              <Link
+                href={`/crm/follow-ups?new=1&leadId=${row.id}${row.listing?.id ? `&listingId=${row.listing.id}` : ''}`}
+                className="btn btn-ghost"
+              >
                 + Follow-up
               </Link>
-              <Link href={`/crm/site-visits?new=1&leadId=${row.id}`} className="btn btn-ghost">
+              <Link
+                href={`/crm/site-visits?new=1&leadId=${row.id}${row.listing?.id ? `&listingId=${row.listing.id}` : ''}`}
+                className="btn btn-ghost"
+              >
                 + Visit
               </Link>
               <button

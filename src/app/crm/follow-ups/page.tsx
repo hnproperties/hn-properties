@@ -13,7 +13,7 @@ export default function FollowUpsPage() {
       description="Everything you owe someone a call about. Overdue items also appear on your desk."
       columns={[
         { key: 'dueAt', label: 'Due', type: 'datetime' },
-        { key: 'listing.publicId', label: 'Property', type: 'mono' },
+        { key: 'listing.publicId', label: 'Property', type: 'property' },
         { key: 'lead.name', label: 'Lead' },
         { key: 'client.name', label: 'Client' },
         { key: 'owner.name', label: 'Owner' },

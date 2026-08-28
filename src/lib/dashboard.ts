@@ -33,7 +33,7 @@ export async function getDashboard(user: CurrentUser) {
     prisma.listing.count({ where: { ...propertyScope, status: 'COMING_SOON' } }),
     prisma.listing.count({ where: { ...propertyScope, status: { in: ['SUBMITTED', 'UNDER_VERIFICATION'] } } }),
     prisma.listing.count({ where: { ...propertyScope, status: 'PUBLISHED', expiresAt: { lte: addDays(today, 14) } } }),
-    prisma.lead.count({ where: { ...leadScope, status: 'NEW' } }),
+    prisma.lead.count({ where: { ...leadScope, viewedAt: null } }),
     prisma.lead.count({ where: { ...leadScope, status: { notIn: ['CLOSED_WON', 'CLOSED_LOST'] } } }),
     prisma.followUp.count({ where: { ...mineOnly('lead', { assignedToId: user.id }), isDone: false, dueAt: { gte: today, lt: tomorrow } } }),
     prisma.followUp.count({ where: { ...mineOnly('lead', { assignedToId: user.id }), isDone: false, dueAt: { lt: today } } }),

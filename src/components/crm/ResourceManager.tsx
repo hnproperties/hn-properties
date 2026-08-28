@@ -16,7 +16,7 @@ export type Option = {
 export type Column = {
   key: string; // dotted path, e.g. 'client.name'
   label: string;
-  type?: 'text' | 'money' | 'date' | 'datetime' | 'badge' | 'mono' | 'count' | 'bool';
+  type?: 'text' | 'money' | 'date' | 'datetime' | 'badge' | 'mono' | 'count' | 'bool' | 'property';
 };
 
 export type FieldDef = {
@@ -65,6 +65,21 @@ function renderCell(row: any, column: Column) {
       return <span className="badge">{labelOf(String(value))}</span>;
     case 'mono':
       return <span className="mono text-xs">{String(value)}</span>;
+    case 'property':
+      // Opens the public page for that reference in a new tab. stopPropagation
+      // keeps the click from also opening this row's edit form.
+      return (
+        <a
+          href={`/property/${value}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          onClick={(e) => e.stopPropagation()}
+          className="mono text-xs text-[var(--brand)] underline decoration-dotted underline-offset-2 hover:decoration-solid"
+          title="Open this property on the website"
+        >
+          {String(value)}
+        </a>
+      );
     case 'bool':
       // A false boolean is a real value, not a blank, so it never reaches the
       // empty check above — render it as a dash rather than the word "false".
