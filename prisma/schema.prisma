@@ -411,6 +411,8 @@ model Listing {
   collaborations Collaboration[]
   priceHistory  PriceHistory[]
 
+  followUps    FollowUp[]
+
   @@unique([propertyId, listingType])
   @@index([status, visibility, listingType])
   @@index([publicLocationId, price])
@@ -789,12 +791,14 @@ model FollowUp {
   isDone      Boolean   @default(false)
   completedAt DateTime?
 
-  leadId   String?
-  lead     Lead?   @relation(fields: [leadId], references: [id], onDelete: Cascade)
-  clientId String?
-  client   Client? @relation(fields: [clientId], references: [id], onDelete: Cascade)
-  ownerId  String?
-  owner    Owner?  @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  leadId    String?
+  lead      Lead?    @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  clientId  String?
+  client    Client?  @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  ownerId   String?
+  owner     Owner?   @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  listingId String?
+  listing   Listing? @relation(fields: [listingId], references: [id], onDelete: SetNull)
 
   assignedToId String?
   assignedTo   User?   @relation("FollowUpOwner", fields: [assignedToId], references: [id])

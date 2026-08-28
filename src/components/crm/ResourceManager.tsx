@@ -6,7 +6,12 @@ import { useCan } from './CrmShell';
 import { inr, shortDate, dateTime, toDateInput, toLocalInput } from '@/lib/format';
 import { label as labelOf } from '@/lib/constants';
 
-export type Option = { value: string; label: string };
+export type Option = {
+  value: string;
+  label: string;
+  /** Extra data carried by some lookups so a pick can fill related fields. */
+  [key: string]: unknown;
+};
 
 export type Column = {
   key: string; // dotted path, e.g. 'client.name'
@@ -20,6 +25,8 @@ export type FieldDef = {
   type?: 'text' | 'tel' | 'email' | 'number' | 'textarea' | 'select' | 'multiselect' | 'date' | 'datetime' | 'checkbox' | 'lookup' | 'search';
   options?: Option[];
   lookup?: string; // name of /api/lookups?name=…
+  /** Map of { fieldToFill: optionProperty } applied when a search option is picked. */
+  autofill?: Record<string, string>;
   half?: boolean;
   hint?: string;
   required?: boolean;
@@ -436,7 +443,23 @@ export default function ResourceManager({
                           id={`crm-${field.name}`}
                           options={options}
                           value={value}
-                          onChange={setValue}
+                          onChange={(next) => {
+                            setValue(next);
+                            // Some picks imply others — choosing a listing fills in
+                            // the owner it belongs to. Only ever fills a blank field,
+                            // so it never overwrites a deliberate choice.
+                            const picked = options.find((o) => o.value === next);
+                            if (picked && field.autofill) {
+                              setForm((current) => {
+                                const patch: Record<string, unknown> = {};
+                                for (const [target, source] of Object.entries(field.autofill!)) {
+                                  const carried = picked[source];
+                                  if (carried && !current[target]) patch[target] = carried;
+                                }
+                                return Object.keys(patch).length ? { ...current, ...patch } : current;
+                              });
+                            }
+                          }}
                           placeholder={field.hint ?? 'Type a code or name…'}
                         />
                       ) : field.type === 'select' || field.type === 'lookup' ? (

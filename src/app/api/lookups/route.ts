@@ -87,10 +87,16 @@ const LOOKUPS: Record<string, { permission?: string; load: (q: string) => Promis
     load: async (q) =>
       (await prisma.listing.findMany({
         where: { OR: q ? [{ publicTitle: { contains: q, mode: 'insensitive' } }, { publicId: { contains: q, mode: 'insensitive' } }] : undefined },
-        select: { id: true, publicId: true, publicTitle: true },
+        select: { id: true, publicId: true, publicTitle: true, property: { select: { ownerId: true } } },
         take: 50,
         orderBy: { createdAt: 'desc' },
-      })).map((l) => ({ value: l.id, label: `${l.publicId} · ${l.publicTitle}` })),
+      })).map((l) => ({
+        value: l.id,
+        label: `${l.publicId} · ${l.publicTitle}`,
+        // Carried so picking a listing can fill in its owner, saving a second
+        // search for something the property already knows.
+        ownerId: l.property?.ownerId ?? undefined,
+      })),
   },
   leads: {
     permission: 'lead.view',

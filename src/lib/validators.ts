@@ -312,6 +312,7 @@ export const followUpSchema = z.object({
   leadId: str(60).optional(),
   clientId: str(60).optional(),
   ownerId: str(60).optional(),
+  listingId: str(60).optional(),
   assignedToId: str(60).optional(),
   isDone: bool.optional(),
 });
