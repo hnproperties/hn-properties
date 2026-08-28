@@ -7,7 +7,7 @@ export default function CollaborationsPage() {
   return (
     <ResourceManager
       resource="collaborations"
-      permission="collaboration"
+      permission="consultant"
       title="Collaborations"
       description="Requests from partner firms. Approving one shares the listing; anything beyond that must be ticked explicitly."
       columns={[

@@ -55,7 +55,18 @@ export const PERMISSIONS: PermissionDef[] = [
   { key: 'deal.commission.view', group: 'Operations', label: 'See commissions and splits', isDanger: true },
   { key: 'deal.payment.manage', group: 'Operations', label: 'Manage payments' },
   // Network
+  //
+  // Consultants and collaborations both run through the generic resource factory,
+  // which checks `<name>.view` / `.create` / `.edit` / `.delete`. Those keys were
+  // missing, so the Consultants screen could be read but never added to or edited,
+  // and Collaborations refused every request including Super Admin's. Collaborations
+  // ride on this same set — the way follow-ups ride on lead permissions — so a firm
+  // and its requests are governed together rather than drifting apart.
   { key: 'consultant.view', group: 'Network', label: 'View partner consultants' },
+  { key: 'consultant.view.all', group: 'Network', label: 'View all partner consultants' },
+  { key: 'consultant.create', group: 'Network', label: 'Add partner consultants' },
+  { key: 'consultant.edit', group: 'Network', label: 'Edit partner consultants' },
+  { key: 'consultant.delete', group: 'Network', label: 'Delete partner consultants', isDanger: true },
   { key: 'consultant.manage', group: 'Network', label: 'Approve and manage consultants' },
   { key: 'collaboration.manage', group: 'Network', label: 'Decide collaboration requests' },
   { key: 'partner.portal', group: 'Network', label: 'Access the partner portal' },

@@ -1,6 +1,7 @@
 'use client';
 
 import { useRef, useState } from 'react';
+import { compressImage } from '@/lib/compress-image';
 
 type Props = {
   urls: string[];
@@ -23,8 +24,12 @@ export default function PhotoUploader({ urls, onChange }: Props) {
     setError(null);
     const added: string[] = [];
 
-    for (const file of Array.from(files)) {
+    for (const original of Array.from(files)) {
       try {
+        // Shrink before uploading, exactly as the public forms do. Staff add
+        // properties from the same phones owners do, and a 6 MB camera photo
+        // over patchy mobile data is the slowest part of adding a property.
+        const file = await compressImage(original);
         const body = new FormData();
         body.append('file', file);
         body.append('kind', 'photo');
@@ -76,7 +81,7 @@ export default function PhotoUploader({ urls, onChange }: Props) {
         <button type="button" className="btn btn-ghost mt-2" disabled={busy} onClick={() => input.current?.click()}>
           Choose files
         </button>
-        <p className="mt-2 text-xs text-[var(--muted)]">JPEG, PNG or WebP · up to 8 MB each · the first photo is the cover</p>
+        <p className="mt-2 text-xs text-[var(--muted)]">JPEG, PNG or WebP · large photos are compressed automatically · the first photo is the cover</p>
       </div>
 
       {error && <p className="mt-2 text-sm text-[var(--danger)]">{error}</p>}

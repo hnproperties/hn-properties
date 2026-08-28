@@ -512,10 +512,41 @@ export const consultantResource: ResourceDef = {
   updateSchema: V.consultantSchema.partial(),
   scope: () => ({}),
   beforeCreate: async (input) => ({ ...input, code: await nextCode('PTR') }),
+  /*
+   * A firm with a login, a deal or a commission against it cannot simply vanish:
+   * the partner user would be left pointing at nothing and the commission would
+   * lose the party it is owed to. Say which of those is in the way, rather than
+   * letting the database answer with a foreign-key error nobody can act on.
+   * Collaboration requests are not counted — those cascade away with the firm,
+   * which is the right outcome for a request that no longer has a requester.
+   */
+  beforeDelete: async (existing) => {
+    const [users, deals, commissions, leads] = await Promise.all([
+      prisma.user.count({ where: { consultantId: existing.id } }),
+      prisma.deal.count({ where: { consultantId: existing.id } }),
+      prisma.commission.count({ where: { consultantId: existing.id } }),
+      prisma.lead.count({ where: { consultantId: existing.id } }),
+    ]);
+
+    const parts: string[] = [];
+    const add = (count: number, one: string, many = `${one}s`) => {
+      if (count > 0) parts.push(`${count} ${count === 1 ? one : many}`);
+    };
+    add(users, 'partner login');
+    add(deals, 'deal');
+    add(commissions, 'commission');
+    add(leads, 'lead');
+
+    if (parts.length) {
+      throw badRequest(
+        `${existing.firmName} still has ${parts.join(', ')} attached. Remove those first, or set the firm to Suspended instead — that takes away inventory access without losing the history.`,
+      );
+    }
+  },
 };
 
 export const collaborationResource: ResourceDef = {
-  name: 'collaboration',
+  name: 'consultant', // collaborations ride on consultant permissions
   model: 'collaboration',
   label: 'Collaboration',
   searchFields: ['code', 'clientBrief'],

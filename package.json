@@ -16,6 +16,7 @@
     "db:seed": "prisma db seed",
     "postinstall": "prisma generate",
     "clear-expiry": "tsx scripts/clear-expiry.ts",
+    "sync-permissions": "tsx scripts/sync-permissions.ts",
     "import-places": "tsx scripts/import-osm-places.ts"
   },
   "prisma": {
