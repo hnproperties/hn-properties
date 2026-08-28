@@ -2,6 +2,8 @@
 
 import ResourceManager from '@/components/crm/ResourceManager';
 import { useCan } from '@/components/crm/CrmShell';
+import Link from 'next/link';
+import { openWhatsApp } from '@/components/crm/ScheduleActions';
 import { toOptions, LEAD_STATUSES, PRIORITIES, SOURCE_TYPES } from '@/lib/constants';
 
 export default function LeadsPage() {
@@ -23,6 +25,31 @@ export default function LeadsPage() {
             { key: 'assignedTo.name', label: 'Assigned to' },
             { key: 'createdAt', label: 'Received', type: 'date' },
           ]}
+          rowActions={(row) => (
+            <span className="mr-3 inline-flex gap-2 align-middle">
+              {/* Prefilled links rather than inline forms: the follow-up and visit
+                  screens already validate and save these properly, so this just
+                  carries the lead across instead of duplicating those forms. */}
+              <Link href={`/crm/follow-ups?new=1&leadId=${row.id}`} className="btn btn-ghost">
+                + Follow-up
+              </Link>
+              <Link href={`/crm/site-visits?new=1&leadId=${row.id}`} className="btn btn-ghost">
+                + Visit
+              </Link>
+              <button
+                type="button"
+                className="btn btn-ghost"
+                onClick={() =>
+                  openWhatsApp({
+                    phone: row.whatsapp ?? row.phone,
+                    message: `Hello ${row.name ?? ''}, this is HN Properties following up on your enquiry.`,
+                  })
+                }
+              >
+                💬
+              </button>
+            </span>
+          )}
           filters={[
             { name: 'status', label: 'Status', options: toOptions(LEAD_STATUSES) },
             { name: 'priority', label: 'Priority', options: toOptions(PRIORITIES) },
@@ -37,9 +64,9 @@ export default function LeadsPage() {
             { name: 'priority', label: 'Priority', type: 'select', options: toOptions(PRIORITIES), half: true },
             { name: 'sourceType', label: 'Source', type: 'select', options: toOptions(SOURCE_TYPES), half: true },
             { name: 'sourceDetail', label: 'Source detail', half: true },
-            { name: 'listingId', label: 'Interested in', type: 'lookup', lookup: 'listings', half: true },
-            { name: 'clientId', label: 'Client record', type: 'lookup', lookup: 'clients', half: true },
-            { name: 'requirementId', label: 'Requirement', type: 'lookup', lookup: 'requirements', half: true },
+            { name: 'listingId', label: 'Interested in', type: 'search', lookup: 'listings', half: true, hint: 'Type a code like HNP-S-JBP-000023' },
+            { name: 'clientId', label: 'Client record', type: 'search', lookup: 'clients', half: true },
+            { name: 'requirementId', label: 'Requirement', type: 'search', lookup: 'requirements', half: true },
             { name: 'assignedToId', label: 'Assigned to', type: 'lookup', lookup: 'users', half: true },
             { name: 'lastContactAt', label: 'Last contacted', type: 'date', half: true },
             { name: 'lostReason', label: 'If lost, why', half: true },

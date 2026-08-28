@@ -1,7 +1,9 @@
 import type { Metadata } from 'next';
 import PublicForm from '@/components/PublicForm';
 import { getPublicIndexes } from '@/lib/public-data';
-import { site, OWNER_PROPERTY_TYPES, FIELD_TYPES } from '@/lib/constants';
+import { site, OWNER_PROPERTY_TYPES, FIELD_TYPES, toOptions, AREA_UNITS } from '@/lib/constants';
+
+const AREA_UNIT_OPTIONS = toOptions(AREA_UNITS);
 
 export const metadata: Metadata = {
   title: 'Submit your property requirement',
@@ -45,7 +47,10 @@ export default async function RequirementPage() {
             { name: 'localities', label: 'Preferred areas', type: 'combobox', options: locations, placeholder: 'Start typing — e.g. Katanga', hint: 'Pick one, or type several separated by commas' },
             { name: 'budgetMin', label: 'Budget from', type: 'money', moneyUnit: '100000', half: true },
             { name: 'budgetMax', label: 'Budget up to', type: 'money', moneyUnit: '100000', half: true },
-            { name: 'areaMin', label: 'Minimum area (sq.ft)', type: 'number', half: true },
+            { name: 'areaMin', label: 'Minimum area', type: 'number', half: true },
+            // Land is quoted in acres or hectares far more often than square feet,
+            // so the unit is a choice rather than baked into the label.
+            { name: 'areaUnit', label: 'Area unit', type: 'select', options: AREA_UNIT_OPTIONS, half: true },
             { name: 'bedroomsMin', label: 'Bedrooms', type: 'number', half: true, visibleFor: FIELD_TYPES.bedrooms },
             { name: 'purpose', label: 'Purpose', placeholder: 'Self use / investment / business', half: true },
             { name: 'timeline', label: 'Timeline', placeholder: 'e.g. within 3 months', half: true },

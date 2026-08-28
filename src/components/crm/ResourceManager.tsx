@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import SearchableSelect from './SearchableSelect';
 import { useCan } from './CrmShell';
 import { inr, shortDate, dateTime, toDateInput, toLocalInput } from '@/lib/format';
 import { label as labelOf } from '@/lib/constants';
@@ -16,7 +17,7 @@ export type Column = {
 export type FieldDef = {
   name: string;
   label: string;
-  type?: 'text' | 'tel' | 'email' | 'number' | 'textarea' | 'select' | 'multiselect' | 'date' | 'datetime' | 'checkbox' | 'lookup';
+  type?: 'text' | 'tel' | 'email' | 'number' | 'textarea' | 'select' | 'multiselect' | 'date' | 'datetime' | 'checkbox' | 'lookup' | 'search';
   options?: Option[];
   lookup?: string; // name of /api/lookups?name=…
   half?: boolean;
@@ -37,6 +38,8 @@ type Props = {
   fixedFilters?: Record<string, string>;
   defaults?: Record<string, unknown>;
   emptyMessage?: string;
+  /** Extra buttons rendered at the start of each row's action cell. */
+  rowActions?: (row: any) => React.ReactNode;
 };
 
 const dig = (row: any, path: string) => path.split('.').reduce((value, key) => value?.[key], row);
@@ -65,6 +68,7 @@ function renderCell(row: any, column: Column) {
 }
 
 export default function ResourceManager({
+  rowActions,
   resource,
   permission,
   title,
@@ -137,11 +141,32 @@ export default function ResourceManager({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [editing]);
 
-  function openCreate() {
-    setForm({ ...defaults });
+  function openCreate(prefill: Record<string, unknown> = {}) {
+    setForm({ ...defaults, ...prefill });
     setFormError(null);
     setEditing({ id: null });
   }
+
+  /**
+   * Open the create form already filled in when arrived at from elsewhere —
+   * "+ Follow-up" on a lead links here with ?new=1&leadId=…, so the person does
+   * not have to find that lead again in a dropdown.
+   */
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('new') !== '1') return;
+
+    const prefill: Record<string, unknown> = {};
+    for (const [key, value] of params.entries()) {
+      if (key !== 'new' && value) prefill[key] = value;
+    }
+    openCreate(prefill);
+
+    // Clear the query so a refresh does not reopen the form.
+    window.history.replaceState({}, '', window.location.pathname);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   function openEdit(row: any) {
     const next: Record<string, any> = {};
@@ -229,7 +254,7 @@ export default function ResourceManager({
           {description && <p className="mt-1 text-sm text-[var(--muted)]">{description}</p>}
         </div>
         {canCreate && (
-          <button type="button" className="btn btn-primary" onClick={openCreate}>
+          <button type="button" className="btn btn-primary" onClick={() => openCreate()}>
             Add {title.toLowerCase().replace(/s$/, '')}
           </button>
         )}
@@ -347,7 +372,8 @@ export default function ResourceManager({
                 {columns.map((column) => (
                   <td key={column.key} className="px-4 py-2.5 align-top">{renderCell(row, column)}</td>
                 ))}
-                <td className="whitespace-nowrap px-4 py-2.5 text-right">
+                <td className="whitespace-nowrap px-4 py-2.5 text-right" onClick={(e) => e.stopPropagation()}>
+                  {rowActions?.(row)}
                   {canEdit && (
                     <button type="button" className="text-sm text-[var(--brand)] hover:underline" onClick={() => openEdit(row)}>
                       Edit
@@ -405,6 +431,14 @@ export default function ResourceManager({
                           <input type="checkbox" checked={!!form[field.name]} onChange={(e) => setValue(e.target.checked)} />
                           {field.hint ?? 'Yes'}
                         </label>
+                      ) : field.type === 'search' ? (
+                        <SearchableSelect
+                          id={`crm-${field.name}`}
+                          options={options}
+                          value={value}
+                          onChange={setValue}
+                          placeholder={field.hint ?? 'Type a code or name…'}
+                        />
                       ) : field.type === 'select' || field.type === 'lookup' ? (
                         <select id={`crm-${field.name}`} className="field" value={value} onChange={(e) => setValue(e.target.value)} required={field.required}>
                           <option value="">Not set</option>

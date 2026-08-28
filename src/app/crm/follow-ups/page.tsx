@@ -1,6 +1,8 @@
 'use client';
 
 import ResourceManager from '@/components/crm/ResourceManager';
+import ScheduleActions from '@/components/crm/ScheduleActions';
+import { dateTime } from '@/lib/format';
 
 export default function FollowUpsPage() {
   return (
@@ -19,14 +21,35 @@ export default function FollowUpsPage() {
       ]}
       filters={[{ name: 'isDone', label: 'State', options: [{ value: 'false', label: 'Open' }, { value: 'true', label: 'Done' }] }]}
       fields={[
-        { name: 'dueAt', label: 'Due at', type: 'datetime', required: true, half: true },
+        { name: 'dueAt', label: 'Due at', type: 'datetime', half: true },
         { name: 'assignedToId', label: 'Assigned to', type: 'lookup', lookup: 'users', half: true },
-        { name: 'leadId', label: 'Lead', type: 'lookup', lookup: 'leads', half: true },
-        { name: 'clientId', label: 'Client', type: 'lookup', lookup: 'clients', half: true },
-        { name: 'ownerId', label: 'Owner', type: 'lookup', lookup: 'owners', half: true },
+        // Searchable: these lists grow past the point where scrolling a dropdown
+        // is workable, and staff usually know a name or code to type.
+        { name: 'leadId', label: 'Lead', type: 'search', lookup: 'leads', half: true, hint: 'Type a lead name or phone' },
+        { name: 'clientId', label: 'Client', type: 'search', lookup: 'clients', half: true, hint: 'Type a client name' },
+        { name: 'ownerId', label: 'Owner', type: 'search', lookup: 'owners', half: true, hint: 'Type an owner name' },
         { name: 'isDone', label: 'Completed', type: 'checkbox', hint: 'Mark as done', half: true },
         { name: 'note', label: 'Note' },
       ]}
+      rowActions={(row) => {
+        const who = row.lead?.name ?? row.client?.name ?? row.owner?.name ?? 'the contact';
+        const when = row.dueAt ? dateTime(row.dueAt) : 'the agreed time';
+        return (
+          <span className="mr-3 inline-flex align-middle">
+            <ScheduleActions
+              title={`Follow up with ${who}`}
+              at={row.dueAt}
+              phone={row.assignedTo?.phone}
+              details={row.note ?? undefined}
+              message={
+                `Follow-up reminder\n\nPlease call ${who} by ${when}.` +
+                (row.note ? `\n\nNote: ${row.note}` : '') +
+                `\n\n— HN Properties`
+              }
+            />
+          </span>
+        );
+      }}
       emptyMessage="No follow-ups scheduled."
     />
   );

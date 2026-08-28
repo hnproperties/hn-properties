@@ -1,6 +1,8 @@
 'use client';
 
 import ResourceManager from '@/components/crm/ResourceManager';
+import ScheduleActions from '@/components/crm/ScheduleActions';
+import { dateTime } from '@/lib/format';
 import { toOptions, VISIT_STATUSES, INTEREST_LEVELS } from '@/lib/constants';
 
 export default function SiteVisitsPage() {
@@ -21,10 +23,10 @@ export default function SiteVisitsPage() {
       ]}
       filters={[{ name: 'status', label: 'Status', options: toOptions(VISIT_STATUSES) }]}
       fields={[
-        { name: 'listingId', label: 'Listing', type: 'lookup', lookup: 'listings', required: true, half: true },
+        { name: 'listingId', label: 'Listing', type: 'search', lookup: 'listings', hint: 'Type a code like HNP-S-JBP-000023', required: true, half: true },
         { name: 'scheduledAt', label: 'Date and time', type: 'datetime', required: true, half: true },
-        { name: 'clientId', label: 'Client', type: 'lookup', lookup: 'clients', half: true },
-        { name: 'leadId', label: 'Lead', type: 'lookup', lookup: 'leads', half: true },
+        { name: 'clientId', hint: 'Type a client name', label: 'Client', type: 'search', lookup: 'clients', half: true },
+        { name: 'leadId', hint: 'Type a lead name or phone', label: 'Lead', type: 'search', lookup: 'leads', half: true },
         { name: 'agentId', label: 'Agent', type: 'lookup', lookup: 'users', half: true },
         { name: 'status', label: 'Status', type: 'select', options: toOptions(VISIT_STATUSES), half: true },
         { name: 'ownerAvailable', label: 'Owner available', type: 'checkbox', hint: 'Owner will be present', half: true },
@@ -33,6 +35,26 @@ export default function SiteVisitsPage() {
         { name: 'feedback', label: 'Feedback after the visit', type: 'textarea' },
         { name: 'notes', label: 'Notes', type: 'textarea' },
       ]}
+      rowActions={(row) => {
+        const who = row.client?.name ?? row.lead?.name ?? 'the client';
+        const property = row.listing?.publicId ?? row.listing?.publicTitle ?? 'the property';
+        const when = row.scheduledAt ? dateTime(row.scheduledAt) : 'the agreed time';
+        return (
+          <span className="mr-3 inline-flex align-middle">
+            <ScheduleActions
+              title={`Site visit — ${property}`}
+              at={row.scheduledAt}
+              phone={row.agent?.phone}
+              details={row.notes ?? undefined}
+              message={
+                `Site visit reminder\n\n${property}\nWith ${who}\nAt ${when}.` +
+                (row.notes ? `\n\nNote: ${row.notes}` : '') +
+                `\n\n— HN Properties`
+              }
+            />
+          </span>
+        );
+      }}
       emptyMessage="No site visits scheduled."
     />
   );

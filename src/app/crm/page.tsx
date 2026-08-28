@@ -25,7 +25,8 @@ function Stat({
   icon: string;
   tone?: 'red' | 'amber' | 'blue' | 'green' | 'violet';
   /** Draws attention to something waiting on a person, not just a number. */
-  alert?: boolean;
+  /** true → red "needs review"; 'notice' → blue "new, take a look". */
+  alert?: boolean | 'notice';
 }) {
   const tones = {
     red: 'bg-[#fdeaea] text-[#c1121f]',
@@ -35,23 +36,35 @@ function Stat({
     violet: 'bg-[#eae7fb] text-[#4c3fb0]',
   } as const;
 
+  const isNotice = alert === 'notice';
+  const isAlert = !!alert;
+  const accent = isNotice ? 'var(--brand)' : 'var(--danger)';
+
   const body = (
     <div
       className={`plate relative flex items-center gap-4 p-4 transition hover:-translate-y-0.5 hover:shadow-[var(--shadow-lift)] ${
-        alert ? 'border-[var(--danger)] bg-[#fff5f5] ring-2 ring-[var(--danger)]/25' : ''
+        isAlert
+          ? isNotice
+            ? 'border-[var(--brand)] bg-[var(--brand-soft)] ring-2 ring-[var(--brand)]/25'
+            : 'border-[var(--danger)] bg-[#fff5f5] ring-2 ring-[var(--danger)]/25'
+          : ''
       }`}
     >
-      {alert && (
+      {isAlert && (
         <span className="absolute -right-1.5 -top-1.5 flex h-3.5 w-3.5">
-          <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[var(--danger)] opacity-60" />
-          <span className="relative inline-flex h-3.5 w-3.5 rounded-full bg-[var(--danger)]" />
+          <span className="absolute inline-flex h-full w-full animate-ping rounded-full opacity-60" style={{ background: accent }} />
+          <span className="relative inline-flex h-3.5 w-3.5 rounded-full" style={{ background: accent }} />
         </span>
       )}
       <span className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-xl text-xl ${tones[tone]}`}>{icon}</span>
       <span>
-        <span className={`display block text-2xl leading-none ${alert ? 'text-[var(--danger)]' : 'text-[var(--navy)]'}`}>{value}</span>
+        <span className="display block text-2xl leading-none" style={{ color: isAlert ? accent : 'var(--navy)' }}>{value}</span>
         <span className="mt-1 block text-sm text-[var(--muted)]">{title}</span>
-        {alert && <span className="mt-0.5 block text-xs font-semibold text-[var(--danger)]">Needs your review</span>}
+        {isAlert && (
+          <span className="mt-0.5 block text-xs font-semibold" style={{ color: accent }}>
+            {isNotice ? 'New — take a look' : 'Needs your review'}
+          </span>
+        )}
       </span>
     </div>
   );
@@ -104,7 +117,14 @@ export default async function DeskPage() {
           alert={data.leads.followUpsOverdue > 0}
         />
         <Stat icon="📅" value={data.operations.visitsToday} title="Site visits today" href="/crm/site-visits" tone="blue" />
-        <Stat icon="🎯" value={data.leads.newLeads} title="New leads" href="/crm/leads" tone="green" />
+        <Stat
+          icon="🎯"
+          value={data.leads.newLeads}
+          title="New leads"
+          href="/crm/leads"
+          tone={data.leads.newLeads ? 'blue' : 'green'}
+          alert={data.leads.newLeads > 0 ? 'notice' : false}
+        />
         <Stat icon="🤝" value={data.operations.activeDeals} title="Active deals" href="/crm/deals" tone="violet" />
       </section>
 
