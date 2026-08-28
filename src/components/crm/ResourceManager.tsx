@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import SearchableSelect from './SearchableSelect';
 import MultiSearchSelect from './MultiSearchSelect';
+import InlineClient from './InlineClient';
 import { useCan } from './CrmShell';
 import { inr, shortDate, dateTime, toDateInput, toLocalInput } from '@/lib/format';
 import { label as labelOf } from '@/lib/constants';
@@ -28,6 +29,10 @@ export type FieldDef = {
   lookup?: string; // name of /api/lookups?name=…
   /** Map of { fieldToFill: optionProperty } applied when a search option is picked. */
   autofill?: Record<string, string>;
+  /** Hide the field unless this returns true — used to match questions to the property type. */
+  showIf?: (form: Record<string, any>, lookups: Record<string, Option[]>) => boolean;
+  /** Offer a small inline form to create a missing record (clients only for now). */
+  allowCreate?: boolean;
   half?: boolean;
   hint?: string;
   required?: boolean;
@@ -439,6 +444,10 @@ export default function ResourceManager({
             <form onSubmit={save} className="space-y-4 p-6">
               <div className="grid gap-4 sm:grid-cols-2">
                 {fields.map((field) => {
+                  // Fields can depend on other answers — a requirement for land
+                  // should not ask how many bedrooms.
+                  if (field.showIf && !field.showIf(form, lookups)) return null;
+
                   const options = field.lookup ? lookups[field.lookup] ?? [] : field.options ?? [];
                   const value = form[field.name] ?? '';
                   const setValue = (next: any) => setForm((current) => ({ ...current, [field.name]: next }));
@@ -543,6 +552,18 @@ export default function ResourceManager({
                           required={field.required}
                           onWheel={(e) => (e.target as HTMLInputElement).blur()}
                           onChange={(e) => setValue(e.target.value)}
+                        />
+                      )}
+
+                      {field.allowCreate && field.lookup === 'clients' && (
+                        <InlineClient
+                          onCreated={(option) => {
+                            setLookups((current) => ({
+                              ...current,
+                              clients: [...(current.clients ?? []), option],
+                            }));
+                            setValue(option.value);
+                          }}
                         />
                       )}
 
