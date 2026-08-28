@@ -53,9 +53,22 @@ const securityHeaders = [
 const nextConfig = {
   reactStrictMode: true,
   images: {
+    /*
+     * Hosts the image optimiser is allowed to fetch from.
+     *
+     * This was `hostname: '**'`, which let anyone point /_next/image at any file
+     * anywhere on the internet and have this site fetch, resize and serve it —
+     * an open image proxy running on your bandwidth and your bill, and a way to
+     * make requests that appear to originate here.
+     *
+     * Nothing needed it. Every next/image in the app points at a local file in
+     * public/, and property photographs are rendered with plain <img> tags that
+     * never touch the optimiser. The Blob host is listed so photographs can be
+     * moved to next/image later without this coming back as a puzzle.
+     */
     remotePatterns: [
-      { protocol: 'https', hostname: '**' }
-    ]
+      { protocol: 'https', hostname: '*.public.blob.vercel-storage.com' },
+    ],
   },
   async headers() {
     return [{ source: '/:path*', headers: securityHeaders }];

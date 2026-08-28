@@ -4,6 +4,7 @@ import { badRequest, tooMany } from '@/lib/errors';
 import { uploadPublic } from '@/lib/storage';
 import { processPhoto, processThumbnail } from '@/lib/images';
 import { hashIp } from '@/lib/audit';
+import { rateLimit } from '@/lib/rate-limit';
 
 export const dynamic = 'force-dynamic';
 
@@ -12,27 +13,22 @@ const IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/avif'];
 
 /**
  * Photo upload for owner submissions — the one unauthenticated write path for files.
- * Kept narrow on purpose: images only, 8 MB each, and a per-address hourly cap so it
+ * Kept narrow on purpose: images only, 25 MB each, and a per-address hourly cap so it
  * cannot be used as free file hosting. Uploaded photos are attached to a DRAFT
  * property and are not public until someone at HN publishes the listing.
+ *
+ * The cap now comes from lib/rate-limit, which is the same counter the public
+ * listing search uses — one implementation to reason about, and one place to
+ * change when it moves to a shared store.
  */
-const recent = new Map<string, number[]>();
-const WINDOW = 60 * 60 * 1000;
+const WINDOW_MS = 60 * 60 * 1000;
 const LIMIT = 20;
-
-function withinLimit(key: string) {
-  const now = Date.now();
-  const hits = (recent.get(key) ?? []).filter((t) => now - t < WINDOW);
-  if (hits.length >= LIMIT) return false;
-  hits.push(now);
-  recent.set(key, hits);
-  if (recent.size > 5000) recent.clear(); // crude ceiling; a shared store replaces this at scale
-  return true;
-}
 
 export const POST = route(async (req: NextRequest) => {
   const key = hashIp(clientIp(req)) ?? 'unknown';
-  if (!withinLimit(key)) throw tooMany('Too many uploads from this connection — please try again later');
+  if (!rateLimit(`public-uploads:${key}`, LIMIT, WINDOW_MS).allowed) {
+    throw tooMany('Too many uploads from this connection — please try again later');
+  }
 
   const form = await req.formData().catch(() => null);
   const file = form?.get('file');

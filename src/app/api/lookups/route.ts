@@ -1,17 +1,36 @@
 import type { NextRequest } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { currentUserOrThrow, ok, route } from '@/lib/api';
-import { can } from '@/lib/rbac';
+import { can, denyPartner } from '@/lib/rbac';
 import { forbidden, badRequest } from '@/lib/errors';
+import type { CurrentUser } from '@/lib/auth';
 
 // Reads the session cookie, so it can never be pre-rendered.
 export const dynamic = 'force-dynamic';
 
 /**
- * Select-box options for the CRM forms. Each lookup declares the permission it needs,
- * so this cannot become a side door into a full contact list.
+ * Select-box options for the CRM forms.
+ *
+ * Each lookup declares the permission it needs — but a permission alone was not
+ * enough. The list screens narrow their rows to the ones a user owns whenever they
+ * lack the matching `*.view.all` grant, and these lookups did not: they checked
+ * `owner.view` and then queried the whole table. A sales employee correctly saw
+ * only their own owners on /crm/owners, and then every owner in the business the
+ * moment they opened a picker on any form. The requirements lookup was worse,
+ * since its label carries the client's name.
+ *
+ * So each lookup that reads a scoped table now also declares `scope`, returning
+ * the same predicate its resource definition uses. Reference data — users, roles,
+ * categories, localities — has no scope, because it is the same for everyone.
  */
-const LOOKUPS: Record<string, { permission?: string; load: (q: string) => Promise<{ value: string; label: string }[]> }> = {
+type Scoped = {
+  permission?: string;
+  /** Row filter applied when the user lacks `<permission>.all`. Mirrors the resource definitions. */
+  scope?: (user: CurrentUser) => Record<string, unknown>;
+  load: (q: string, where: Record<string, unknown>) => Promise<{ value: string; label: string }[]>;
+};
+
+const LOOKUPS: Record<string, Scoped> = {
   users: {
     load: async (q) =>
       (await prisma.user.findMany({
@@ -54,9 +73,10 @@ const LOOKUPS: Record<string, { permission?: string; load: (q: string) => Promis
   },
   owners: {
     permission: 'owner.view',
-    load: async (q) =>
+    scope: (user) => ({ assignedToId: user.id }),
+    load: async (q, where) =>
       (await prisma.owner.findMany({
-        where: { name: q ? { contains: q, mode: 'insensitive' } : undefined },
+        where: { AND: [where, { name: q ? { contains: q, mode: 'insensitive' } : undefined }] },
         select: { id: true, name: true, code: true },
         take: 50,
         orderBy: { createdAt: 'desc' },
@@ -64,9 +84,10 @@ const LOOKUPS: Record<string, { permission?: string; load: (q: string) => Promis
   },
   clients: {
     permission: 'client.view',
-    load: async (q) =>
+    scope: (user) => ({ assignedToId: user.id }),
+    load: async (q, where) =>
       (await prisma.client.findMany({
-        where: { name: q ? { contains: q, mode: 'insensitive' } : undefined },
+        where: { AND: [where, { name: q ? { contains: q, mode: 'insensitive' } : undefined }] },
         select: { id: true, name: true, code: true },
         take: 50,
         orderBy: { createdAt: 'desc' },
@@ -74,9 +95,16 @@ const LOOKUPS: Record<string, { permission?: string; load: (q: string) => Promis
   },
   properties: {
     permission: 'property.view',
-    load: async (q) =>
+    scope: (user) => ({ OR: [{ assignedToId: user.id }, { createdById: user.id }] }),
+    load: async (q, where) =>
       (await prisma.property.findMany({
-        where: { isArchived: false, OR: q ? [{ title: { contains: q, mode: 'insensitive' } }, { code: { contains: q, mode: 'insensitive' } }] : undefined },
+        where: {
+          AND: [
+            where,
+            { isArchived: false },
+            { OR: q ? [{ title: { contains: q, mode: 'insensitive' } }, { code: { contains: q, mode: 'insensitive' } }] : undefined },
+          ],
+        },
         select: { id: true, code: true, title: true },
         take: 50,
         orderBy: { createdAt: 'desc' },
@@ -84,9 +112,17 @@ const LOOKUPS: Record<string, { permission?: string; load: (q: string) => Promis
   },
   listings: {
     permission: 'property.view',
-    load: async (q) =>
+    scope: (user) => ({
+      OR: [{ assignedToId: user.id }, { property: { createdById: user.id } }, { property: { assignedToId: user.id } }],
+    }),
+    load: async (q, where) =>
       (await prisma.listing.findMany({
-        where: { OR: q ? [{ publicTitle: { contains: q, mode: 'insensitive' } }, { publicId: { contains: q, mode: 'insensitive' } }] : undefined },
+        where: {
+          AND: [
+            where,
+            { OR: q ? [{ publicTitle: { contains: q, mode: 'insensitive' } }, { publicId: { contains: q, mode: 'insensitive' } }] : undefined },
+          ],
+        },
         select: { id: true, publicId: true, publicTitle: true, property: { select: { ownerId: true } } },
         take: 50,
         orderBy: { createdAt: 'desc' },
@@ -100,9 +136,10 @@ const LOOKUPS: Record<string, { permission?: string; load: (q: string) => Promis
   },
   leads: {
     permission: 'lead.view',
-    load: async (q) =>
+    scope: (user) => ({ assignedToId: user.id }),
+    load: async (q, where) =>
       (await prisma.lead.findMany({
-        where: { name: q ? { contains: q, mode: 'insensitive' } : undefined },
+        where: { AND: [where, { name: q ? { contains: q, mode: 'insensitive' } : undefined }] },
         select: { id: true, name: true, code: true },
         take: 50,
         orderBy: { createdAt: 'desc' },
@@ -110,13 +147,16 @@ const LOOKUPS: Record<string, { permission?: string; load: (q: string) => Promis
   },
   deals: {
     permission: 'deal.view',
-    load: async () =>
-      (await prisma.deal.findMany({ select: { id: true, code: true }, take: 50, orderBy: { createdAt: 'desc' } })).map((d) => ({
+    scope: (user) => ({ agentId: user.id }),
+    load: async (_q, where) =>
+      (await prisma.deal.findMany({ where, select: { id: true, code: true }, take: 50, orderBy: { createdAt: 'desc' } })).map((d) => ({
         value: d.id,
         label: d.code,
       })),
   },
   consultants: {
+    // Deliberately unscoped, matching the consultant resource: partner firms are
+    // shared context rather than anyone's private rows.
     permission: 'consultant.view',
     load: async () =>
       (await prisma.consultant.findMany({ select: { id: true, firmName: true, code: true }, take: 50 })).map((c) => ({
@@ -126,8 +166,10 @@ const LOOKUPS: Record<string, { permission?: string; load: (q: string) => Promis
   },
   requirements: {
     permission: 'requirement.view',
-    load: async () =>
+    scope: (user) => ({ OR: [{ assignedToId: user.id }, { client: { assignedToId: user.id } }] }),
+    load: async (_q, where) =>
       (await prisma.requirement.findMany({
+        where,
         select: { id: true, code: true, client: { select: { name: true } } },
         take: 50,
         orderBy: { createdAt: 'desc' },
@@ -137,9 +179,18 @@ const LOOKUPS: Record<string, { permission?: string; load: (q: string) => Promis
 
 export const GET = route(async (req: NextRequest) => {
   const user = await currentUserOrThrow();
+  denyPartner(user);
+
   const name = req.nextUrl.searchParams.get('name') ?? '';
   const lookup = LOOKUPS[name];
   if (!lookup) throw badRequest('Unknown lookup');
-  if (lookup.permission && !can(user, lookup.permission) && !can(user, `${lookup.permission}.all`)) throw forbidden();
-  return ok(await lookup.load(req.nextUrl.searchParams.get('q') ?? ''));
+
+  const seesAll = lookup.permission ? can(user, `${lookup.permission}.all`) : true;
+  if (lookup.permission && !can(user, lookup.permission) && !seesAll) throw forbidden();
+
+  // `<permission>.all` lifts the row filter; without it the user sees only their
+  // own records, exactly as the matching list screen shows them.
+  const where = seesAll || !lookup.scope ? {} : lookup.scope(user);
+
+  return ok(await lookup.load(req.nextUrl.searchParams.get('q') ?? '', where));
 });
