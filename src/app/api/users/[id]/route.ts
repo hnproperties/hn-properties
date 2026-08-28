@@ -11,6 +11,7 @@ const SAFE = {
   id: true, code: true, name: true, email: true, phone: true, isActive: true,
   lastLoginAt: true, createdAt: true,
   role: { select: { id: true, key: true, name: true, rank: true } },
+  consultant: { select: { id: true, firmName: true, status: true } },
 } as const;
 
 export const GET = route(async (_req, { params }: { params: { id: string } }) => {
@@ -30,10 +31,33 @@ export const PATCH = route(async (req: NextRequest, { params }: { params: { id: 
   if (existing.role.rank < user.roleRank) throw forbidden('You cannot edit an account above your own role');
 
   const input = parse(userSchema.partial(), await readJson(req));
+  let roleKey = existing.role.key;
   if (input.roleId && input.roleId !== existing.roleId) {
     const role = await prisma.role.findUnique({ where: { id: input.roleId } });
     if (!role) throw badRequest('Choose a role');
     if (role.rank < user.roleRank) throw forbidden('You cannot promote above your own role');
+    roleKey = role.key;
+  }
+
+  /*
+   * Keep the partner firm and the role in step.
+   *
+   * A partner account with no firm cannot use the partner portal at all — the
+   * inventory route looks the firm up to check it is approved, and no firm reads
+   * the same as an unapproved one. So a partner must name a firm, whether that
+   * comes in on this request or was already stored. Moving someone off the partner
+   * role clears the link instead of leaving it to reappear if they are ever moved
+   * back.
+   */
+  let consultantId: string | null | undefined;
+  if (roleKey === 'PARTNER') {
+    const chosen = input.consultantId ?? existing.consultantId;
+    if (!chosen) throw badRequest('Choose the partner firm this person belongs to');
+    const firm = await prisma.consultant.findUnique({ where: { id: chosen }, select: { id: true } });
+    if (!firm) throw badRequest('That partner firm no longer exists');
+    consultantId = firm.id;
+  } else if (existing.consultantId) {
+    consultantId = null;
   }
 
   // The last active Super Admin must not be able to lock everyone out.
@@ -51,7 +75,7 @@ export const PATCH = route(async (req: NextRequest, { params }: { params: { id: 
       email: input.email?.toLowerCase(),
       phone: input.phone,
       roleId: input.roleId,
-      consultantId: input.consultantId,
+      consultantId,
       isActive: input.isActive,
       ...(input.password ? { passwordHash: await hashPassword(input.password) } : {}),
       // Any change to role, access or password invalidates existing sessions immediately.

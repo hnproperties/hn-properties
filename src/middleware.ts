@@ -35,6 +35,22 @@ export async function middleware(req: NextRequest) {
     return NextResponse.redirect(new URL('/crm', req.url));
   }
 
+  /*
+   * The redirect above only moves a partner away from a CRM *page*. It does not
+   * stop them calling the API those pages use, and until now nothing else did:
+   * the handlers check permissions, and a permission ticked onto the Partner
+   * Consultant role — by accident or otherwise — was enough to read the owner or
+   * client tables in full. Role is a stronger statement than any single grant, so
+   * it is enforced here, ahead of the handler, and cannot be undone from Settings.
+   *
+   * Every internal API path in the matcher below is denied to a partner outright.
+   * Their own routes (/api/partner/*), sign-in (/api/auth/*) and the public
+   * endpoints are not matched at all, so they are unaffected.
+   */
+  if (isApi && session.role === 'PARTNER') {
+    return NextResponse.json({ error: 'Not available for partner accounts' }, { status: 403 });
+  }
+
   return NextResponse.next();
 }
 
@@ -62,5 +78,11 @@ export const config = {
     '/api/dashboard/:path*',
     '/api/lookups/:path*',
     '/api/reports/:path*',
+    // Internal too, and previously outside the matcher entirely — global search
+    // reaches owners, clients and leads, and the CRM streams carry desk activity.
+    '/api/search/:path*',
+    '/api/uploads/:path*',
+    '/api/locations/:path*',
+    '/api/crm/:path*',
   ],
 };

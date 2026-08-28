@@ -2,7 +2,7 @@ import { NextResponse, type NextRequest } from 'next/server';
 import { ZodError, type ZodTypeAny } from 'zod';
 import { prisma, plain } from './prisma';
 import { getCurrentUser, type CurrentUser } from './auth';
-import { can, requireUser } from './rbac';
+import { can, requireUser, denyPartner } from './rbac';
 import { ApiError, badRequest, forbidden, notFound } from './errors';
 import { audit } from './audit';
 
@@ -113,6 +113,7 @@ export function scopeWhere(def: ResourceDef, user: CurrentUser) {
 export function collectionRoutes(def: ResourceDef) {
   const GET = route(async (req: NextRequest) => {
     const user = await currentUserOrThrow();
+    denyPartner(user);
     if (!can(user, `${def.name}.view`) && !can(user, `${def.name}.view.all`)) throw forbidden();
 
     const params = req.nextUrl.searchParams;
@@ -145,6 +146,7 @@ export function collectionRoutes(def: ResourceDef) {
 
   const POST = route(async (req: NextRequest) => {
     const user = await currentUserOrThrow();
+    denyPartner(user);
     if (!can(user, `${def.name}.create`)) throw forbidden();
 
     const input = parse(def.createSchema, await readJson(req));
@@ -182,6 +184,7 @@ export function itemRoutes(def: ResourceDef) {
 
   const GET = route(async (_req: NextRequest, { params }: Ctx) => {
     const user = await currentUserOrThrow();
+    denyPartner(user);
     if (!can(user, `${def.name}.view`) && !can(user, `${def.name}.view.all`)) throw forbidden();
     const row = await load(params.id, user);
     return ok(plain(def.mask ? def.mask(row, user) : row));
@@ -189,6 +192,7 @@ export function itemRoutes(def: ResourceDef) {
 
   const PATCH = route(async (req: NextRequest, { params }: Ctx) => {
     const user = await currentUserOrThrow();
+    denyPartner(user);
     if (!can(user, `${def.name}.edit`)) throw forbidden();
     const existing = await load(params.id, user);
     const input = parse(def.updateSchema, await readJson(req));
@@ -213,6 +217,7 @@ export function itemRoutes(def: ResourceDef) {
 
   const DELETE = route(async (req: NextRequest, { params }: Ctx) => {
     const user = await currentUserOrThrow();
+    denyPartner(user);
     if (!can(user, `${def.name}.delete`)) throw forbidden();
     const existing = await load(params.id, user);
     await def.beforeDelete?.(existing, user);

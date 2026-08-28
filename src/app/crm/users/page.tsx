@@ -20,15 +20,23 @@ export default function TeamPage() {
   const [notice, setNotice] = useState<string | null>(null);
   const [selected, setSelected] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);
+  const [firms, setFirms] = useState<{ value: string; label: string }[]>([]);
 
   const load = useCallback(async () => {
-    const [usersResponse, rolesResponse] = await Promise.all([fetch('/api/users'), fetch('/api/roles')]);
+    const [usersResponse, rolesResponse, firmsResponse] = await Promise.all([
+      fetch('/api/users'),
+      fetch('/api/roles'),
+      // Needed to link a partner account to its firm; harmless if the signed-in
+      // user cannot read consultants, in which case the picker simply stays empty.
+      fetch('/api/lookups?name=consultants'),
+    ]);
     if (usersResponse.ok) setUsers((await usersResponse.json()).data.rows);
     if (rolesResponse.ok) {
       const payload = await rolesResponse.json();
       setRoles(payload.data.roles);
       setPermissions(payload.data.permissions);
     }
+    if (firmsResponse.ok) setFirms((await firmsResponse.json()).data ?? []);
   }, []);
 
   useEffect(() => {
@@ -135,6 +143,9 @@ export default function TeamPage() {
     }
   }
 
+  /** The drawer shows the firm picker only for the partner role, where it is required. */
+  const partnerRoleSelected = roles.find((role) => role.id === form.roleId)?.key === 'PARTNER';
+
   const grouped = permissions.reduce<Record<string, Permission[]>>((acc, permission) => {
     (acc[permission.group] ??= []).push(permission);
     return acc;
@@ -222,7 +233,14 @@ export default function TeamPage() {
                   {user.id === me?.id && <span className="badge ml-2">you</span>}
                 </td>
                 <td className="px-4 py-2 text-[var(--muted)]">{user.email}</td>
-                <td className="px-4 py-2"><span className="badge">{user.role?.name}</span></td>
+                <td className="px-4 py-2">
+                  <span className="badge">{user.role?.name}</span>
+                  {user.role?.key === 'PARTNER' && (
+                    user.consultant
+                      ? <span className="mt-1 block text-xs text-[var(--muted)]">{user.consultant.firmName}{user.consultant.status !== 'APPROVED' ? ` · ${String(user.consultant.status).toLowerCase()}` : ''}</span>
+                      : <span className="mt-1 block text-xs text-[var(--danger)]">No firm linked</span>
+                  )}
+                </td>
                 <td className="px-4 py-2 text-xs">{user.lastLoginAt ? dateTime(user.lastLoginAt) : 'Never'}</td>
                 <td className="px-4 py-2">{user.isActive ? 'Active' : 'Deactivated'}</td>
                 <td className="px-4 py-2 text-right">
@@ -230,7 +248,14 @@ export default function TeamPage() {
                     type="button"
                     className="text-sm text-[var(--brand)] hover:underline"
                     onClick={() => {
-                      setForm({ name: user.name, email: user.email, phone: user.phone ?? '', roleId: user.role?.id, isActive: user.isActive });
+                      setForm({
+                        name: user.name,
+                        email: user.email,
+                        phone: user.phone ?? '',
+                        roleId: user.role?.id,
+                        consultantId: user.consultant?.id ?? '',
+                        isActive: user.isActive,
+                      });
                       setEditing(user);
                     }}
                   >
@@ -293,6 +318,27 @@ export default function TeamPage() {
                   <option value="">Select</option>
                   {roles.map((role) => <option key={role.id} value={role.id}>{role.name}</option>)}
                 </select></div>
+
+              {partnerRoleSelected && (
+                <div>
+                  <label className="label" htmlFor="u-firm">Partner firm</label>
+                  <select
+                    id="u-firm"
+                    className="field"
+                    value={form.consultantId ?? ''}
+                    onChange={(e) => setForm({ ...form, consultantId: e.target.value })}
+                    required
+                  >
+                    <option value="">Select the firm</option>
+                    {firms.map((firm) => <option key={firm.value} value={firm.value}>{firm.label}</option>)}
+                  </select>
+                  <p className="mt-1 text-xs text-[var(--muted)]">
+                    {firms.length
+                      ? 'A partner sees shared inventory only once their firm is set here and that firm is Approved on the Consultants screen.'
+                      : 'No partner firms yet — add one on the Consultants screen first, then come back.'}
+                  </p>
+                </div>
+              )}
               <div><label className="label" htmlFor="u-password">{editing.id ? 'New password (optional)' : 'Starting password'}</label>
                 <input id="u-password" type="password" className="field" value={form.password ?? ''} onChange={(e) => setForm({ ...form, password: e.target.value })} />
                 <p className="mt-1 text-xs text-[var(--muted)]">Changing this signs the person out everywhere.</p></div>

@@ -12,7 +12,7 @@ const SAFE = {
   id: true, code: true, name: true, email: true, phone: true, isActive: true,
   lastLoginAt: true, createdAt: true,
   role: { select: { id: true, key: true, name: true, rank: true } },
-  consultant: { select: { id: true, firmName: true } },
+  consultant: { select: { id: true, firmName: true, status: true } },
 } as const;
 
 export const GET = route(async () => {
@@ -21,6 +21,27 @@ export const GET = route(async () => {
   const rows = await prisma.user.findMany({ select: SAFE, orderBy: [{ isActive: 'desc' }, { name: 'asc' }] });
   return ok({ rows: plain(rows), total: rows.length, page: 1, perPage: rows.length });
 });
+
+/**
+ * Ties a partner account to the firm it belongs to.
+ *
+ * The partner portal is unusable without this link: it looks up the firm to check
+ * the firm is approved, and an account with no firm gets "not approved for
+ * inventory access yet" no matter how many permissions it holds. That was easy to
+ * hit, because nothing used to require the link or even ask for it — so a partner
+ * account is now refused unless a firm is named.
+ *
+ * The reverse is enforced too. A firm on a Sales or Manager account means nothing
+ * and would come back to life if the role were ever switched to Partner, so the
+ * link is dropped rather than carried quietly.
+ */
+async function resolveConsultant(roleKey: string, consultantId?: string | null) {
+  if (roleKey !== 'PARTNER') return null;
+  if (!consultantId) throw badRequest('Choose the partner firm this person belongs to');
+  const firm = await prisma.consultant.findUnique({ where: { id: consultantId }, select: { id: true } });
+  if (!firm) throw badRequest('That partner firm no longer exists');
+  return firm.id;
+}
 
 export const POST = route(async (req: NextRequest) => {
   const user = await currentUserOrThrow();
@@ -34,6 +55,8 @@ export const POST = route(async (req: NextRequest) => {
   // Nobody can mint an account more senior than themselves.
   if (role.rank < user.roleRank) throw forbidden('You cannot create an account above your own role');
 
+  const consultantId = await resolveConsultant(role.key, input.consultantId);
+
   const created = await prisma.user.create({
     data: {
       code: await nextCode(role.key === 'PARTNER' ? 'PTU' : 'EMP'),
@@ -42,7 +65,7 @@ export const POST = route(async (req: NextRequest) => {
       phone: input.phone,
       passwordHash: await hashPassword(input.password),
       roleId: input.roleId,
-      consultantId: input.consultantId ?? null,
+      consultantId,
       isActive: input.isActive ?? true,
     },
     select: SAFE,
