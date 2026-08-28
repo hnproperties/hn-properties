@@ -53,6 +53,32 @@ const PROPERTY_ITEM_INCLUDE = {
   _count: { select: { documents: true } },
 };
 
+/**
+ * Placeholder rows used when a property is saved without a category or locality.
+ * Created once on first use and reused after, so incomplete records group together
+ * and are easy to find and finish later.
+ */
+async function placeholderCategoryId() {
+  const existing = await prisma.propertyCategory.findFirst({ where: { slug: 'unspecified' }, select: { id: true } });
+  if (existing) return existing.id;
+  const created = await prisma.propertyCategory.create({
+    data: { name: 'Unspecified', slug: 'unspecified', segment: 'RESIDENTIAL', sortOrder: 999, isActive: true },
+    select: { id: true },
+  });
+  return created.id;
+}
+
+async function placeholderLocationId() {
+  const existing = await prisma.location.findFirst({ where: { slug: 'unspecified' }, select: { id: true } });
+  if (existing) return existing.id;
+  const city = await prisma.location.findFirst({ where: { type: 'CITY' }, orderBy: { sortOrder: 'asc' }, select: { id: true } });
+  const created = await prisma.location.create({
+    data: { name: 'Unspecified', slug: 'unspecified', type: 'LOCALITY', parentId: city?.id, sortOrder: 999, isActive: true },
+    select: { id: true },
+  });
+  return created.id;
+}
+
 export const propertyResource: ResourceDef = {
   name: 'property',
   model: 'property',
@@ -74,13 +100,24 @@ export const propertyResource: ResourceDef = {
   mask: maskProperty,
   beforeCreate: async (input, user) => {
     const { media, ...rest } = input;
+
+    // Category, locality and title are columns the database cannot store as null,
+    // but staff should still be able to save a half-known property and finish it
+    // later. Fill the gaps with clearly-labelled placeholders they can correct,
+    // rather than refusing the save.
+    const categoryId = rest.categoryId || (await placeholderCategoryId());
+    const locationId = rest.locationId || (await placeholderLocationId());
+
     const location = await prisma.location.findUnique({
-      where: { id: input.locationId },
+      where: { id: locationId },
       include: { parent: { include: { parent: true } } },
     });
     const cityCode = findCityCode(location);
     return {
       ...rest,
+      title: (rest.title ?? '').trim() || 'Untitled property',
+      categoryId,
+      locationId,
       code: await nextPropertyCode(cityCode),
       createdById: user.id,
       assignedToId: rest.assignedToId ?? user.id,

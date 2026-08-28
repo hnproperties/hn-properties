@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import SearchableSelect from './SearchableSelect';
+import MultiSearchSelect from './MultiSearchSelect';
 import { useCan } from './CrmShell';
 import { inr, shortDate, dateTime, toDateInput, toLocalInput } from '@/lib/format';
 import { label as labelOf } from '@/lib/constants';
@@ -22,7 +23,7 @@ export type Column = {
 export type FieldDef = {
   name: string;
   label: string;
-  type?: 'text' | 'tel' | 'email' | 'number' | 'textarea' | 'select' | 'multiselect' | 'date' | 'datetime' | 'checkbox' | 'lookup' | 'search';
+  type?: 'text' | 'tel' | 'email' | 'number' | 'textarea' | 'select' | 'multiselect' | 'date' | 'datetime' | 'checkbox' | 'lookup' | 'search' | 'multisearch';
   options?: Option[];
   lookup?: string; // name of /api/lookups?name=…
   /** Map of { fieldToFill: optionProperty } applied when a search option is picked. */
@@ -484,6 +485,36 @@ export default function ResourceManager({
                             <option key={option.value} value={option.value}>{option.label}</option>
                           ))}
                         </select>
+                      ) : field.type === 'multisearch' ? (
+                        <MultiSearchSelect
+                          options={options}
+                          value={Array.isArray(form[field.name]) ? form[field.name] : []}
+                          onChange={setValue}
+                          placeholder={field.hint ?? 'Type to search…'}
+                          createLabel="Add locality"
+                          onCreate={
+                            field.lookup === 'locations'
+                              ? async (name) => {
+                                  const response = await fetch('/api/locations', {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({ name }),
+                                  });
+                                  if (!response.ok) return null;
+                                  const payload = await response.json();
+                                  const made = payload.data ?? payload;
+                                  const option = { value: made.id, label: made.name };
+                                  // Add to the in-memory list so it shows as a chip
+                                  // straight away rather than after a reload.
+                                  setLookups((current) => ({
+                                    ...current,
+                                    locations: [...(current.locations ?? []), option],
+                                  }));
+                                  return option;
+                                }
+                              : undefined
+                          }
+                        />
                       ) : field.type === 'multiselect' ? (
                         <div className="flex flex-wrap gap-2 rounded-[3px] border p-2">
                           {options.map((option) => {

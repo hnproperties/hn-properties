@@ -84,10 +84,14 @@ export const ownerSchema = z.object({
 });
 
 export const propertySchema = z.object({
-  title: z.string().trim().min(4).max(200),
+  // Nothing here is mandatory: staff often record what they have on the phone and
+  // fill the rest in later. The API supplies a placeholder title, category and
+  // locality when they are left blank, since those three are columns the database
+  // cannot store as null.
+  title: z.string().trim().max(200).optional(),
   summary: text.optional(),
-  categoryId: z.string().min(1, 'Choose a category'),
-  locationId: z.string().min(1, 'Choose a location'),
+  categoryId: str(60).optional(),
+  locationId: str(60).optional(),
   colony: str(120).optional(),
   landmark: str(120).optional(),
   road: str(120).optional(),

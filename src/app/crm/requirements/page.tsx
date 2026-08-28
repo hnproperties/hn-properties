@@ -29,8 +29,8 @@ export default function RequirementsPage() {
         fields={[
           { name: 'clientId', label: 'Client', type: 'lookup', lookup: 'clients', required: true, half: true },
           { name: 'listingType', label: 'Buy or rent', type: 'select', options: toOptions(LISTING_TYPES), half: true },
-          { name: 'categoryIds', label: 'Property types', type: 'multiselect', lookup: 'categories' },
-          { name: 'locationIds', label: 'Preferred localities', type: 'multiselect', lookup: 'locations' },
+          { name: 'categoryIds', label: 'Property types', type: 'multisearch', lookup: 'categories', hint: 'Type a property type' },
+          { name: 'locationIds', label: 'Preferred localities', type: 'multisearch', lookup: 'locations', hint: 'Type a locality — add it if missing' },
           { name: 'budgetMin', label: 'Budget from (₹)', type: 'number', half: true },
           { name: 'budgetMax', label: 'Budget up to (₹)', type: 'number', half: true },
           { name: 'areaMin', label: 'Area from', type: 'number', half: true },
