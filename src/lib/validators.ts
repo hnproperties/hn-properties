@@ -5,18 +5,33 @@ import * as C from './constants';
  * Empty strings from HTML forms should mean "not provided", not "invalid number".
  * Whitespace, null and undefined are all treated the same way — an optional field
  * must never be the reason a form is rejected.
+ *
+ * The `.optional()` inside is what makes that true, and it is easy to lose.
+ * Writing `z.preprocess(blank, schema)` and relying on the caller's `.optional()`
+ * does not work: `.optional()` wraps the preprocessing step rather than sitting
+ * inside it, so it only short-circuits on a value that is *already* undefined. An
+ * empty string is not, so it went through preprocessing, came out as undefined,
+ * and was handed to a schema that still required a value — which failed with
+ * "Required" and surfaced as "Please check the highlighted fields" on a field the
+ * person had quite deliberately left blank. Making the inner schema optional means
+ * the converted value is accepted by whatever the caller wrapped.
  */
 const blankToUndefined = <T extends z.ZodTypeAny>(schema: T) =>
   z.preprocess(
     (v) => (v === '' || v === null || v === undefined || (typeof v === 'string' && v.trim() === '') ? undefined : v),
-    schema,
+    schema.optional(),
   );
 
 const num = blankToUndefined(z.coerce.number().finite());
 const int = blankToUndefined(z.coerce.number().finite().transform((n) => Math.round(n)));
 const str = (max = 500) => blankToUndefined(z.string().trim().max(max));
 const text = blankToUndefined(z.string().trim().max(8000));
-const bool = z.preprocess((v) => (v === 'on' || v === 'true' ? true : v === 'false' ? false : v), z.boolean());
+/** Same trap as above, so the inner schema is optional here too — and a blank clears rather than fails. */
+const bool = z.preprocess(
+  (v) =>
+    v === 'on' || v === 'true' ? true : v === 'false' ? false : v === '' || v === null ? undefined : v,
+  z.boolean().optional(),
+);
 const date = blankToUndefined(z.coerce.date());
 const enumOf = (values: readonly string[]) => blankToUndefined(z.enum(values as [string, ...string[]]));
 const list = z.preprocess((v) => (Array.isArray(v) ? v : v ? [v] : []), z.array(z.string().trim().max(120)));
