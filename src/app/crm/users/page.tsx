@@ -1,12 +1,14 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { dateTime } from '@/lib/format';
+import { useCrmUser } from '@/components/crm/CrmShell';
 
 type Role = { id: string; key: string; name: string; rank: number; permissions: { permissionId: string }[]; _count: { users: number } };
 type Permission = { id: string; key: string; group: string; label: string; isDanger: boolean };
 
 export default function TeamPage() {
+  const me = useCrmUser();
   const [users, setUsers] = useState<any[]>([]);
   const [roles, setRoles] = useState<Role[]>([]);
   const [permissions, setPermissions] = useState<Permission[]>([]);
@@ -16,6 +18,8 @@ export default function TeamPage() {
   const [roleEditing, setRoleEditing] = useState<Role | null>(null);
   const [roleSet, setRoleSet] = useState<string[]>([]);
   const [notice, setNotice] = useState<string | null>(null);
+  const [selected, setSelected] = useState<string[]>([]);
+  const [busy, setBusy] = useState(false);
 
   const load = useCallback(async () => {
     const [usersResponse, rolesResponse] = await Promise.all([fetch('/api/users'), fetch('/api/roles')]);
@@ -30,6 +34,71 @@ export default function TeamPage() {
   useEffect(() => {
     load();
   }, [load]);
+
+  /**
+   * Your own rank, read from the roles list rather than the session, because the
+   * session carries a role key and the comparison below needs the number.
+   */
+  const myRank = useMemo(() => roles.find((role) => role.key === me?.role)?.rank ?? Number.MAX_SAFE_INTEGER, [roles, me]);
+
+  /**
+   * You cannot act on yourself, or on anyone senior to you. Hiding the checkbox
+   * rather than letting the click fail keeps the refusal in one place — the API
+   * enforces the same two rules, this just avoids offering the action.
+   */
+  const selectable = useCallback(
+    (row: any) => row.id !== me?.id && (row.role?.rank ?? 0) >= myRank,
+    [me, myRank],
+  );
+
+  const selectableUsers = useMemo(() => users.filter(selectable), [users, selectable]);
+  const allSelected = selectableUsers.length > 0 && selected.length === selectableUsers.length;
+
+  /** Runs one request per row and reports the first refusal, so a partial run still says why. */
+  async function runOnSelected(label: string, request: (id: string) => Promise<Response>) {
+    setBusy(true);
+    setNotice(null);
+    let failure: string | null = null;
+    let done = 0;
+
+    for (const id of selected) {
+      const response = await request(id);
+      if (response.ok) done += 1;
+      else {
+        const payload = await response.json().catch(() => ({}));
+        failure ??= payload.error ?? `Could not ${label} one account`;
+      }
+    }
+
+    setBusy(false);
+    setSelected([]);
+    setNotice(failure ?? `${done} account${done === 1 ? '' : 's'} ${label}.`);
+    await load();
+  }
+
+  function deactivateSelected() {
+    if (!selected.length) return;
+    if (!confirm(`Deactivate ${selected.length} account${selected.length > 1 ? 's' : ''}? They will be signed out and lose access, but their records stay attributed to them.`)) return;
+    return runOnSelected('deactivated', (id) =>
+      fetch(`/api/users/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ isActive: false }),
+      }),
+    );
+  }
+
+  function deleteSelected() {
+    if (!selected.length) return;
+    if (
+      !confirm(
+        `Permanently delete ${selected.length} account${selected.length > 1 ? 's' : ''}? This cannot be undone. Accounts that still have properties, leads or other work against them will be refused — deactivate those instead.`,
+      )
+    ) {
+      return;
+    }
+    return runOnSelected('deleted', (id) => fetch(`/api/users/${id}?hard=1`, { method: 'DELETE' }));
+  }
 
   async function saveUser(event: React.FormEvent) {
     event.preventDefault();
@@ -77,7 +146,7 @@ export default function TeamPage() {
         <div>
           <h1 className="display text-2xl">Team</h1>
           <p className="mt-1 text-sm text-[var(--muted)]">
-            Accounts are deactivated rather than deleted, so the audit trail stays attributable.
+            Deactivating keeps a person&rsquo;s records attributed to them. Deleting is for accounts that were never real.
           </p>
         </div>
         <button type="button" className="btn btn-primary" onClick={() => { setForm({ isActive: true }); setEditing({ id: null }); }}>
@@ -87,10 +156,40 @@ export default function TeamPage() {
 
       {notice && <p className="plate p-3 text-sm">{notice}</p>}
 
+      {selected.length > 0 && (
+        <div className="plate flex flex-wrap items-center gap-2 p-3">
+          <span className="text-sm font-medium">{selected.length} selected</span>
+          <button type="button" className="btn btn-ghost py-2 text-sm" disabled={busy} onClick={deactivateSelected}>
+            Deactivate
+          </button>
+          <button
+            type="button"
+            className="btn btn-ghost py-2 text-sm text-[var(--danger)]"
+            disabled={busy}
+            onClick={deleteSelected}
+          >
+            {busy ? 'Working…' : 'Delete permanently'}
+          </button>
+          <button type="button" className="btn btn-ghost py-2 text-sm" disabled={busy} onClick={() => setSelected([])}>
+            Clear
+          </button>
+        </div>
+      )}
+
       <div className="plate overflow-x-auto">
-        <table className="w-full min-w-[640px] text-sm">
+        <table className="w-full min-w-[700px] text-sm">
           <thead>
             <tr className="border-b">
+              <th className="w-10 px-4 py-2.5">
+                <input
+                  type="checkbox"
+                  aria-label="Select all"
+                  className="h-4 w-4 rounded"
+                  checked={allSelected}
+                  disabled={selectableUsers.length === 0}
+                  onChange={(e) => setSelected(e.target.checked ? selectableUsers.map((u) => u.id) : [])}
+                />
+              </th>
               {['Code', 'Name', 'Email', 'Role', 'Last signed in', 'State', ''].map((head) => (
                 <th key={head} className="table-head px-4 py-2.5 text-left font-normal">{head}</th>
               ))}
@@ -98,9 +197,30 @@ export default function TeamPage() {
           </thead>
           <tbody>
             {users.map((user) => (
-              <tr key={user.id} className="border-b last:border-0">
+              <tr
+                key={user.id}
+                className={`border-b last:border-0 ${selected.includes(user.id) ? 'bg-[var(--brand-soft)]' : ''}`}
+              >
+                <td className="px-4 py-2">
+                  {selectable(user) ? (
+                    <input
+                      type="checkbox"
+                      aria-label={`Select ${user.name}`}
+                      className="h-4 w-4 rounded"
+                      checked={selected.includes(user.id)}
+                      onChange={(e) =>
+                        setSelected((current) => (e.target.checked ? [...current, user.id] : current.filter((id) => id !== user.id)))
+                      }
+                    />
+                  ) : (
+                    <span className="sr-only">This account cannot be selected</span>
+                  )}
+                </td>
                 <td className="px-4 py-2"><span className="mono text-xs">{user.code}</span></td>
-                <td className="px-4 py-2">{user.name}</td>
+                <td className="px-4 py-2">
+                  {user.name}
+                  {user.id === me?.id && <span className="badge ml-2">you</span>}
+                </td>
                 <td className="px-4 py-2 text-[var(--muted)]">{user.email}</td>
                 <td className="px-4 py-2"><span className="badge">{user.role?.name}</span></td>
                 <td className="px-4 py-2 text-xs">{user.lastLoginAt ? dateTime(user.lastLoginAt) : 'Never'}</td>
@@ -119,7 +239,7 @@ export default function TeamPage() {
                 </td>
               </tr>
             ))}
-            {!users.length && <tr><td colSpan={7} className="px-4 py-10 text-center text-[var(--muted)]">No team accounts.</td></tr>}
+            {!users.length && <tr><td colSpan={8} className="px-4 py-10 text-center text-[var(--muted)]">No team accounts.</td></tr>}
           </tbody>
         </table>
       </div>
