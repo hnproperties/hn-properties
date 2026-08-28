@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
+import PartnerSignOut from '@/components/PartnerSignOut';
 
 export const metadata: Metadata = {
   title: { default: 'Partner portal', template: '%s — HN Properties partners' },
@@ -15,9 +16,10 @@ export default function PartnerLayout({ children }: { children: React.ReactNode 
             <Link href="/partner" className="display text-lg">HN Properties</Link>
             <p className="eyebrow">Partner portal</p>
           </div>
-          <form action="/api/auth/logout" method="post">
+          <div className="flex items-center gap-2">
             <Link href="/" className="btn btn-ghost">Website</Link>
-          </form>
+            <PartnerSignOut />
+          </div>
         </div>
       </header>
       <main className="wrap py-8">{children}</main>
