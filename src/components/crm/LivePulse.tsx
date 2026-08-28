@@ -97,6 +97,17 @@ export default function LivePulse({ onCounts }: { onCounts?: (counts: Counts) =>
     [router, onCounts, push],
   );
 
+  /**
+   * Lets a page force an immediate re-count. Marking leads as viewed changes the
+   * badge, and waiting for the next poll to notice would leave it lit for a few
+   * seconds after the person is already looking at the list.
+   */
+  useEffect(() => {
+    const handler = () => check(false);
+    window.addEventListener('crm:recount', handler);
+    return () => window.removeEventListener('crm:recount', handler);
+  }, [check]);
+
   useEffect(() => {
     let source: EventSource | null = null;
     let retry: ReturnType<typeof setTimeout> | null = null;

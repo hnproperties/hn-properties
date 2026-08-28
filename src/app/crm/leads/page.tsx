@@ -2,6 +2,7 @@
 
 import ResourceManager from '@/components/crm/ResourceManager';
 import { useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { useCan } from '@/components/crm/CrmShell';
 import Link from 'next/link';
 import { openWhatsApp } from '@/components/crm/ScheduleActions';
@@ -10,12 +11,20 @@ import { toOptions, LEAD_STATUSES, PRIORITIES, SOURCE_TYPES } from '@/lib/consta
 export default function LeadsPage() {
   const can = useCan();
 
-  // Opening this screen counts as having seen the new leads, so the desk
-  // highlight clears. Fire-and-forget: if it fails the badge simply stays lit,
-  // which is the safe direction to fail in.
+  const router = useRouter();
+
+  // Opening this screen counts as having seen the new leads, so the desk tile and
+  // the sidebar badge clear. router.refresh() re-runs the server components that
+  // hold those counts, so the badge goes immediately rather than waiting for the
+  // next poll. If the call fails the badge simply stays lit — the safe direction.
   useEffect(() => {
-    fetch('/api/leads/mark-viewed', { method: 'POST' }).catch(() => {});
-  }, []);
+    fetch('/api/leads/mark-viewed', { method: 'POST' })
+      .then(() => {
+        router.refresh();
+        window.dispatchEvent(new Event('crm:recount'));
+      })
+      .catch(() => {});
+  }, [router]);
 
   return (
     <div className="space-y-5">

@@ -30,7 +30,7 @@ export const GET = route(async () => {
     nextVisit,
   ] = await Promise.all([
     prisma.listing.count({ where: { status: { in: ['SUBMITTED', 'UNDER_VERIFICATION'] } } }),
-    prisma.lead.count({ where: { ...leadScope, status: 'NEW' } }),
+    prisma.lead.count({ where: { ...leadScope, viewedAt: null } }),
     prisma.followUp.count({
       where: { ...leadScope, isDone: false, dueAt: { gte: startOfDay, lt: new Date(startOfDay.getTime() + 86_400_000) } },
     }),
