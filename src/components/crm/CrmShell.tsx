@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import Image from 'next/image';
+import { openInstallDialog } from '@/components/PwaSetup';
 import { usePathname, useRouter } from 'next/navigation';
 import { createContext, useContext, useEffect, useRef, useState } from 'react';
 import LivePulse, { type Counts } from './LivePulse';
@@ -304,6 +305,25 @@ export default function CrmShell({ children }: { children: React.ReactNode }) {
                 );
               })}
             </nav>
+
+            {/*
+              Sits under the nav, below Settings, and only on mobile — the sidebar
+              is a drawer at this width, and installing to a home screen is a phone
+              gesture. On a laptop the browser's own address-bar control is the
+              natural place for it.
+            */}
+            <div className="border-t p-3 lg:hidden">
+              <button
+                type="button"
+                className="btn btn-ghost w-full py-2 text-sm"
+                onClick={() => {
+                  setOpen(false);
+                  openInstallDialog();
+                }}
+              >
+                Download HN Core App
+              </button>
+            </div>
 
             <div className="border-t p-3">
               <div className="flex items-center gap-2.5 rounded-lg bg-[var(--paper)] p-2.5">

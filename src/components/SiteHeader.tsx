@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import Image from 'next/image';
+import { openInstallDialog } from '@/components/PwaSetup';
 import { usePathname } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { site, waLink } from '@/lib/constants';
@@ -325,6 +326,22 @@ export default function SiteHeader() {
             <Link href="/post" onClick={() => setOpen(false)} className="btn btn-primary w-full">
               Post Your Property
             </Link>
+
+            {/*
+              Only in the mobile menu: installing to a home screen is a phone
+              gesture, and this panel is already mobile-only, so it needs no
+              breakpoint of its own.
+            */}
+            <button
+              type="button"
+              className="btn btn-ghost w-full"
+              onClick={() => {
+                setOpen(false);
+                openInstallDialog();
+              }}
+            >
+              Download Our App
+            </button>
 
             <div className="flex items-center justify-center gap-5 pt-1 text-sm">
               <a href={`tel:${site.phone}`} className="font-semibold text-[var(--brand)]">

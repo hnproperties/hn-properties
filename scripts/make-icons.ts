@@ -1,162 +1,180 @@
 /**
- * Generates the app icon set for both installable apps.
+ * Generates the app icon set for both installable apps from the glossy tile
+ * artwork in source-icons/.
  *
- * Two problems with the previous icons:
+ * The artwork is a rounded-square tile with a bevelled rim and a drop shadow,
+ * sitting on a black canvas. Used as-is that produces exactly the border the
+ * earlier icons had: Android applies its own circle or squircle mask, which cuts
+ * into a shape that is already rounded, and the gap between the two shows as a
+ * ring of background.
  *
- * 1. icon.png has its own rounded-square shape baked in, with transparent
- *    corners. Android then applies its *own* mask on top, so the launcher's
- *    circle or squircle cut into an already-rounded shape and left the visible
- *    inner border. The fix is a background that fills the whole square edge to
- *    edge — whatever shape the launcher cuts, it only ever cuts background.
- *
- * 2. Maskable icons are cropped hard: up to 20% can be shaved off every side, so
- *    the mark has to sit inside the middle ~62% or it loses its edges on some
- *    launchers. The background bleeds to 100%, the mark stays well inside.
+ * So rather than shrink the tile inside a square, this crops *into* it. The rim and
+ * the rounded corners are discarded, and what is left is the tile's interior —
+ * opaque to every edge. Whatever shape a launcher cuts, it only ever cuts glossy
+ * surface. Losing the rim costs nothing: the launcher was going to mask it away,
+ * and every other icon on the phone takes its shape from the launcher too, which
+ * is what makes this look native rather than pasted on.
  *
  * Run:  npx tsx scripts/make-icons.ts
  */
 import sharp from 'sharp';
 import path from 'path';
+import fs from 'fs';
 
+const SRC = path.join(process.cwd(), 'source-icons');
 const OUT = path.join(process.cwd(), 'public');
 
-const NAVY = '#33527a'; // sampled from the existing icon, lifted slightly for the gradient top
-const NAVY_DEEP = '#1e3149';
-const LIGHT = '#ffffff';
-const LIGHT_EDGE = '#dce8f1';
+/**
+ * Extra margin taken once the crop has cleared the rounded corners.
+ *
+ * The clearance itself is measured per image rather than assumed. A fixed figure
+ * kept leaving a dark notch in one corner of the navy tile, because the detected
+ * bounds include a drop shadow that sits off-centre and drags the crop with it.
+ */
+const CORNER_MARGIN = 0.03;
 
 /**
- * The glossy sheen: a bright band across the top that falls away through a
- * shallow curve, the way a curved glass surface catches light. Kept restrained —
- * enough to lift the icon off the wallpaper, not so much that it looks wet.
+ * How much of the finished icon the artwork occupies before its edges are extended.
+ *
+ * The house already fills most of the tile, so the face is only pulled in slightly —
+ * enough to keep the mark off the very edge without making it look shrunken next to
+ * the other apps on the home screen.
  */
-function gloss(size: number, strong: boolean) {
-  // Restrained on purpose. At 0.34 the sheen washed the navy toward grey and left
-  // a visible hard arc where the band ended — the icon stopped reading as the brand
-  // colour. Low opacity with the gradient falling to nothing keeps the highlight
-  // as a suggestion of curved glass rather than a stripe painted across the top.
-  const top = strong ? 0.16 : 0.13;
-  const bottom = strong ? 0.0 : 0.0;
-  const curve = size * 0.5;
-  return Buffer.from(
-    `<svg width="${size}" height="${size}" xmlns="http://www.w3.org/2000/svg">
-       <defs>
-         <linearGradient id="sheen" x1="0" y1="0" x2="0" y2="1">
-           <stop offset="0%" stop-color="#ffffff" stop-opacity="${top}"/>
-           <stop offset="100%" stop-color="#ffffff" stop-opacity="${bottom}"/>
-         </linearGradient>
-       </defs>
-       <path d="M0,0 H${size} V${size * 0.42} Q${curve},${size * 0.58} 0,${size * 0.42} Z" fill="url(#sheen)"/>
-     </svg>`,
-  );
+const FACE_FRACTION = 0.95;
+
+/** Rough bounds of the tile within the black canvas, shadow included. */
+async function tileBounds(file: string) {
+  const { data, info } = await sharp(file).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
+  const { width: W, height: H, channels: C } = info;
+
+  let minX = W;
+  let minY = H;
+  let maxX = 0;
+  let maxY = 0;
+
+  for (let y = 0; y < H; y += 1) {
+    for (let x = 0; x < W; x += 1) {
+      const i = (y * W + x) * C;
+      if ((data[i] + data[i + 1] + data[i + 2]) / 3 > 28) {
+        if (x < minX) minX = x;
+        if (x > maxX) maxX = x;
+        if (y < minY) minY = y;
+        if (y > maxY) maxY = y;
+      }
+    }
+  }
+  return { left: minX, top: minY, width: maxX - minX + 1, height: maxY - minY + 1 };
 }
 
-/** A soft top-to-bottom background so the icon reads as a surface, not a flat swatch. */
-function background(size: number, from: string, to: string) {
-  return Buffer.from(
-    `<svg width="${size}" height="${size}" xmlns="http://www.w3.org/2000/svg">
-       <defs>
-         <linearGradient id="bg" x1="0" y1="0" x2="0.25" y2="1">
-           <stop offset="0%" stop-color="${from}"/>
-           <stop offset="100%" stop-color="${to}"/>
-         </linearGradient>
-       </defs>
-       <rect width="${size}" height="${size}" fill="url(#bg)"/>
-     </svg>`,
+/**
+ * The tile's opaque interior: square, full bleed, with no rounded corner left in it.
+ *
+ * The crop is stepped inwards and the four corners tested against the artwork until
+ * all of them land on tile rather than on the black surround or its shadow. The two
+ * tiles clear at slightly different points, so measuring beats assuming.
+ */
+async function faceOf(file: string) {
+  const bounds = await tileBounds(file);
+  const { data, info } = await sharp(file).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
+  const { width: W, channels: C } = info;
+
+  const at = (x: number, y: number) => {
+    const i = (y * W + x) * C;
+    return [data[i], data[i + 1], data[i + 2]] as const;
+  };
+
+  // Tile is either a bright face or a blue-dominant navy. The black surround and
+  // its desaturated grey shadow pass neither test.
+  const isTile = ([r, g, b]: readonly [number, number, number]) =>
+    (r + g + b) / 3 > 60 || (b > 22 && b > r + 6);
+
+  const side = Math.min(bounds.width, bounds.height);
+  const cx = bounds.left + Math.round(bounds.width / 2);
+  const cy = bounds.top + Math.round(bounds.height / 2);
+
+  let inset = 0;
+  for (let step = 0; step <= 0.32; step += 0.005) {
+    const half = Math.round((side / 2) * (1 - step * 2));
+    const corners = [
+      at(cx - half, cy - half),
+      at(cx + half, cy - half),
+      at(cx - half, cy + half),
+      at(cx + half, cy + half),
+    ];
+    if (corners.every(isTile)) {
+      inset = step + CORNER_MARGIN;
+      break;
+    }
+  }
+  if (!inset) throw new Error(`Could not find a clean crop for ${path.basename(file)}`);
+
+  const half = Math.round((side / 2) * (1 - inset * 2));
+  console.log(
+    `  ${path.basename(file)}: corners clear at ${((inset - CORNER_MARGIN) * 100).toFixed(1)}%, cropping at ${(inset * 100).toFixed(1)}%`,
   );
+
+  return sharp(file)
+    .extract({ left: cx - half, top: cy - half, width: half * 2, height: half * 2 })
+    .png()
+    .toBuffer();
 }
 
-type Build = {
-  file: string;
-  size: number;
-  mark: Buffer;
-  from: string;
-  to: string;
-  /** Fraction of the square the mark occupies. Lower for maskable, which gets cropped. */
-  scale: number;
-  strongGloss: boolean;
-};
+/**
+ * Scales the face slightly in, then grows its edges out to fill the square.
+ *
+ * The border is grown from a blurred copy rather than the sharp one. Replicating
+ * edge pixels directly smears whatever sits against that edge: a highlight becomes
+ * a bright streak, a stray bevel pixel becomes a dark notch. Blurring first averages
+ * those away, so what runs off the edge is the colour the gloss was already heading
+ * towards — the surface continuing, rather than padding stuck on.
+ */
+async function render(face: Buffer, size: number) {
+  const inner = Math.round(size * FACE_FRACTION);
+  const pad = Math.round((size - inner) / 2);
+  const rest = size - inner - pad;
 
-async function build({ file, size, mark, from, to, scale, strongGloss }: Build) {
-  const inner = Math.round(size * scale);
-  const resized = await sharp(mark)
-    .resize(inner, inner, { fit: 'contain', background: { r: 0, g: 0, b: 0, alpha: 0 } })
+  const base = await sharp(face)
+    .resize(inner, inner, { kernel: 'lanczos3' })
+    .blur(Math.max(1, size * 0.04))
+    .extend({ top: pad, bottom: rest, left: pad, right: rest, extendWith: 'copy' })
     .png()
     .toBuffer();
 
-  await sharp(background(size, from, to))
-    .composite([
-      { input: resized, gravity: 'center' },
-      { input: gloss(size, strongGloss), blend: 'over' },
-    ])
-    .png({ compressionLevel: 9 })
-    .toFile(path.join(OUT, file));
-}
+  const crisp = await sharp(face).resize(inner, inner, { kernel: 'lanczos3' }).png().toBuffer();
 
-/**
- * Lifts the house mark off its flat background so it can be re-composited at the
- * right size on a full-bleed square. Source artwork is a small opaque PNG with the
- * mark in one tone against another, so a brightness threshold separates them
- * cleanly and keeps the window panes as holes rather than filling them in.
- *
- * `light: true` keeps the pale pixels (white house on navy); `light: false` keeps
- * the dark ones (blue house on white).
- */
-async function extractMark(file: string, light: boolean, tint?: string) {
-  const src = sharp(file).resize(1024, 1024, { kernel: 'lanczos3' });
-  const { data, info } = await src.ensureAlpha().raw().toBuffer({ resolveWithObject: true });
-  const out = Buffer.alloc(info.width * info.height * 4);
-
-  for (let i = 0, j = 0; i < data.length; i += info.channels, j += 4) {
-    const [r, g, b] = [data[i], data[i + 1], data[i + 2]];
-    const brightness = (r + g + b) / 3;
-    const keep = light ? brightness > 150 : brightness < 200;
-    if (tint) {
-      const hex = tint.replace('#', '');
-      out[j] = parseInt(hex.slice(0, 2), 16);
-      out[j + 1] = parseInt(hex.slice(2, 4), 16);
-      out[j + 2] = parseInt(hex.slice(4, 6), 16);
-    } else {
-      out[j] = r;
-      out[j + 1] = g;
-      out[j + 2] = b;
-    }
-    out[j + 3] = keep ? 255 : 0;
-  }
-
-  return sharp(out, { raw: { width: info.width, height: info.height, channels: 4 } }).trim().png().toBuffer();
+  return sharp(base).composite([{ input: crisp, top: pad, left: pad }]).png({ compressionLevel: 9 }).toBuffer();
 }
 
 async function main() {
-  const uploads = path.join(process.cwd(), 'source-icons');
+  const apps = [
+    { name: 'app', src: path.join(SRC, 'app-tile.png') },
+    { name: 'core', src: path.join(SRC, 'core-tile.png') },
+  ];
 
-  // Public marketplace: the blue house, kept in its original colours.
-  const blueMark = await extractMark(path.join(uploads, 'apple-icon_white.png'), false);
+  for (const app of apps) {
+    if (!fs.existsSync(app.src)) throw new Error(`Missing artwork: ${app.src}`);
+    const face = await faceOf(app.src);
 
-  // HN Core: the white house, forced to pure white so it stays crisp on navy.
-  const whiteMark = await extractMark(path.join(uploads, 'apple-icon_blue.png'), true, '#ffffff');
+    /*
+     * The same full-bleed face for both `any` and `maskable`.
+     *
+     * Maskable icons normally pull the mark further in to survive cropping, but the
+     * house is centred and a launcher mask takes the corners, not the middle. A
+     * second, more inset version would only make the icon look smaller than every
+     * other app on the home screen for no real gain.
+     */
+    for (const size of [192, 512]) {
+      const rendered = await render(face, size);
+      await fs.promises.writeFile(path.join(OUT, `icon-${app.name}-${size}.png`), rendered);
+      await fs.promises.writeFile(path.join(OUT, `icon-${app.name}-maskable-${size}.png`), rendered);
+    }
 
-  const builds: Build[] = [];
-
-  // --- Public marketplace: light, so it reads as the consumer-facing app ---
-  for (const size of [192, 512]) {
-    builds.push({ file: `icon-app-${size}.png`, size, mark: blueMark, from: LIGHT, to: LIGHT_EDGE, scale: 0.72, strongGloss: false });
-    builds.push({ file: `icon-app-maskable-${size}.png`, size, mark: blueMark, from: LIGHT, to: LIGHT_EDGE, scale: 0.58, strongGloss: false });
+    // iOS has no maskable concept: it rounds whatever it is given, so it wants
+    // exactly this — full bleed, with nothing already rounded about it.
+    await fs.promises.writeFile(path.join(OUT, `apple-icon-${app.name}.png`), await render(face, 180));
   }
-  builds.push({ file: 'apple-icon-app.png', size: 180, mark: blueMark, from: LIGHT, to: LIGHT_EDGE, scale: 0.72, strongGloss: false });
 
-  // --- HN Core: navy, matching the CRM's own theme ---
-  for (const size of [192, 512]) {
-    builds.push({ file: `icon-core-${size}.png`, size, mark: whiteMark, from: NAVY, to: NAVY_DEEP, scale: 0.7, strongGloss: true });
-    builds.push({ file: `icon-core-maskable-${size}.png`, size, mark: whiteMark, from: NAVY, to: NAVY_DEEP, scale: 0.56, strongGloss: true });
-  }
-  builds.push({ file: 'apple-icon-core.png', size: 180, mark: whiteMark, from: NAVY, to: NAVY_DEEP, scale: 0.7, strongGloss: true });
-
-  for (const b of builds) {
-    await build(b);
-    console.log(`  ${b.file}`);
-  }
-  console.log(`\n${builds.length} icons written to public/.`);
+  console.log('\nDone.');
 }
 
 main().catch((error) => {

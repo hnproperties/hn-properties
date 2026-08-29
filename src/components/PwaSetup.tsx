@@ -25,6 +25,20 @@ import { useEffect, useState } from 'react';
 
 type InstallEvent = Event & { prompt: () => Promise<void>; userChoice: Promise<{ outcome: string }> };
 
+/**
+ * Lets a menu button open this dialog without either side importing the other.
+ *
+ * The dialog also appears once on its own, but a person who dismissed it — or who
+ * installed on one phone and later opens the site on another — needs a way back to
+ * it. `openInstallDialog()` is that way, and it ignores the dismissed flag, because
+ * someone tapping "Download Our App" has just asked for it.
+ */
+export const INSTALL_EVENT = 'hn:open-install';
+
+export function openInstallDialog() {
+  window.dispatchEvent(new Event(INSTALL_EVENT));
+}
+
 type Surface = 'public' | 'crm';
 
 const COPY = {
@@ -64,8 +78,6 @@ export default function PwaSetup({ surface = 'public' }: { surface?: Surface }) 
     } catch {
       // Private browsing can throw on localStorage; treat that as not dismissed.
     }
-    if (dismissed) return;
-
     // Already running from the installed icon — nothing to offer.
     const installed =
       window.matchMedia('(display-mode: standalone)').matches ||
@@ -80,7 +92,9 @@ export default function PwaSetup({ surface = 'public' }: { surface?: Surface }) 
       event.preventDefault(); // suppress the browser's own banner; we pick the moment
       setDeferred(event as InstallEvent);
       setManual(null);
-      setOpen(true);
+      // Captured either way, so the menu button can use the real prompt later, but
+      // only shown unprompted the first time.
+      if (!dismissed) setOpen(true);
     };
     window.addEventListener('beforeinstallprompt', onPrompt);
 
@@ -94,7 +108,7 @@ export default function PwaSetup({ surface = 'public' }: { surface?: Surface }) 
       setDeferred((current) => {
         if (!current) {
           setManual(isIos ? 'ios' : isAndroid ? 'android' : 'desktop');
-          setOpen(true);
+          if (!dismissed) setOpen(true);
         }
         return current;
       });
@@ -105,6 +119,28 @@ export default function PwaSetup({ surface = 'public' }: { surface?: Surface }) 
       window.removeEventListener('beforeinstallprompt', onPrompt);
     };
   }, [copy.key]);
+
+  /*
+   * Opening on request has to work even when the automatic prompt never ran —
+   * after a dismissal, the effect above returns early and never worked out which
+   * platform this is. So the fallback steps are decided here too, at the moment
+   * they are needed.
+   */
+  useEffect(() => {
+    const onAsk = () => {
+      setDeferred((current) => {
+        if (!current) {
+          const ua = window.navigator.userAgent;
+          const isIos = /iPad|iPhone|iPod/.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1);
+          setManual(isIos ? 'ios' : /Android/.test(ua) ? 'android' : 'desktop');
+        }
+        return current;
+      });
+      setOpen(true);
+    };
+    window.addEventListener(INSTALL_EVENT, onAsk);
+    return () => window.removeEventListener(INSTALL_EVENT, onAsk);
+  }, []);
 
   function dismiss() {
     try {
