@@ -2,6 +2,7 @@ import SiteHeader from '@/components/SiteHeader';
 import SiteFooter from '@/components/SiteFooter';
 import FloatingContact from '@/components/FloatingContact';
 import LiveRefresh from '@/components/LiveRefresh';
+import PwaSetup from '@/components/PwaSetup';
 
 export default function SiteLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -11,6 +12,7 @@ export default function SiteLayout({ children }: { children: React.ReactNode }) 
       <SiteFooter />
       <FloatingContact />
       <LiveRefresh />
+      <PwaSetup />
     </div>
   );
 }

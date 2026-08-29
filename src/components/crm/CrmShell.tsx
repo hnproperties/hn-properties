@@ -221,6 +221,10 @@ export default function CrmShell({ children }: { children: React.ReactNode }) {
 
   async function signOut() {
     await fetch('/api/auth/logout', { method: 'POST' });
+    // Empty the service worker's caches too. Nothing private is stored there by
+    // design, but on a shared phone the next person should not be able to page
+    // back through what the last one was looking at.
+    navigator.serviceWorker?.controller?.postMessage('clear-cache');
     router.push('/login');
     router.refresh();
   }

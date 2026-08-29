@@ -22,6 +22,12 @@ const contentSecurityPolicy = [
   "font-src 'self' https://fonts.gstatic.com data:",
   "img-src 'self' data: blob: https://*.public.blob.vercel-storage.com https://maps.googleapis.com https://maps.gstatic.com https://*.googleusercontent.com",
   "connect-src 'self' https://maps.googleapis.com",
+  // Both fall under default-src 'self' already, but stated explicitly so that
+  // tightening default-src later cannot silently stop the app installing or the
+  // service worker registering — a failure that shows up as "it just opens in a
+  // browser tab again" rather than as an obvious error.
+  "worker-src 'self'",
+  "manifest-src 'self'",
   "frame-ancestors 'none'",
   "object-src 'none'",
   "base-uri 'self'",
@@ -71,7 +77,24 @@ const nextConfig = {
     ],
   },
   async headers() {
-    return [{ source: '/:path*', headers: securityHeaders }];
+    return [
+      { source: '/:path*', headers: securityHeaders },
+      {
+        /*
+         * The service worker must not be cached by the CDN or the browser.
+         *
+         * It is the file that decides what everything else caches, so a stale copy
+         * is self-perpetuating: the old worker keeps serving old assets and never
+         * learns that a new one exists. Browsers now bypass HTTP cache for worker
+         * updates, but the CDN in front of it does not, so say it explicitly.
+         */
+        source: '/sw.js',
+        headers: [
+          { key: 'Cache-Control', value: 'public, max-age=0, must-revalidate' },
+          { key: 'Service-Worker-Allowed', value: '/' },
+        ],
+      },
+    ];
   },
 };
 
