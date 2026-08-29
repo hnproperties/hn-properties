@@ -1,19 +1,25 @@
 /**
- * Generates the app icon set for both installable apps from the glossy tile
- * artwork in source-icons/.
+ * Generates the app icon set for both installable apps from the artwork in
+ * source-icons/.
  *
- * The artwork is a rounded-square tile with a bevelled rim and a drop shadow,
- * sitting on a black canvas. Used as-is that produces exactly the border the
- * earlier icons had: Android applies its own circle or squircle mask, which cuts
- * into a shape that is already rounded, and the gap between the two shows as a
- * ring of background.
+ * The job is not just to resize a picture. Android hands the icon to whatever
+ * launcher the phone is running, and that launcher cuts it to its own outline —
+ * circle, squircle, teardrop, pebble, flower, and others besides. Two things have
+ * to be true for the result to look right in all of them:
  *
- * So rather than shrink the tile inside a square, this crops *into* it. The rim and
- * the rounded corners are discarded, and what is left is the tile's interior —
- * opaque to every edge. Whatever shape a launcher cuts, it only ever cuts glossy
- * surface. Losing the rim costs nothing: the launcher was going to mask it away,
- * and every other icon on the phone takes its shape from the launcher too, which
- * is what makes this look native rather than pasted on.
+ *   1. The background must reach every edge. Artwork that carries its own rounded
+ *      corners gets cut a second time, and the gap between the two shapes shows as
+ *      the ring of background this went through several rounds of fixing.
+ *
+ *   2. The mark must sit well inside. The published safe area is a circle across
+ *      80% of the icon, but the more adventurous outlines bite further in at the
+ *      edge midpoints, so the house is kept inside about two thirds. That is also
+ *      roughly where every other app on a home screen sits — which is what makes an
+ *      icon look native rather than pasted on.
+ *
+ * The artwork cannot satisfy both as it stands: the house nearly fills its tile. So
+ * it is taken apart — the tile face becomes a full-bleed background, the house is
+ * lifted off it and placed back smaller — rather than scaled as one piece.
  *
  * Run:  npx tsx scripts/make-icons.ts
  */
@@ -24,154 +30,193 @@ import fs from 'fs';
 const SRC = path.join(process.cwd(), 'source-icons');
 const OUT = path.join(process.cwd(), 'public');
 
-/**
- * Extra margin taken once the crop has cleared the rounded corners.
- *
- * The clearance itself is measured per image rather than assumed. A fixed figure
- * kept leaving a dark notch in one corner of the navy tile, because the detected
- * bounds include a drop shadow that sits off-centre and drags the crop with it.
- */
-const CORNER_MARGIN = 0.03;
+/** How much of the icon's width the house spans. Comfortably inside every launcher outline. */
+const MARK_FRACTION = 0.66;
+
+type Art = {
+  name: string;
+  file: string;
+  /** True when the mark is lighter than its background, as with the white house on navy. */
+  markIsLight: boolean;
+  /** Luminance either side of which a pixel is certainly mark or certainly background. */
+  band: [number, number];
+};
+
+const ART: Art[] = [
+  // Blue house and grey window on a near-white tile: the mark is the darker part.
+  { name: 'app', file: 'app-tile.png', markIsLight: false, band: [140, 215] },
+  // White house on navy: the mark is the lighter part.
+  { name: 'core', file: 'core-tile.png', markIsLight: true, band: [110, 185] },
+];
 
 /**
- * How much of the finished icon the artwork occupies before its edges are extended.
+ * Separates the house from the tile it is drawn on.
  *
- * The house already fills most of the tile, so the face is only pulled in slightly —
- * enough to keep the mark off the very edge without making it look shrunken next to
- * the other apps on the home screen.
+ * A soft ramp rather than a hard cut-off, so the bevelled edges and their
+ * highlights stay smooth. A hard threshold leaves the mark looking cut out with
+ * scissors, which is very visible once it sits on a different background.
  */
-const FACE_FRACTION = 0.95;
+async function liftMark(file: string, art: Art) {
+  const trimmed = await sharp(file).trim().png().toBuffer();
+  const meta = await sharp(trimmed).metadata();
 
-/** Rough bounds of the tile within the black canvas, shadow included. */
-async function tileBounds(file: string) {
-  const { data, info } = await sharp(file).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
-  const { width: W, height: H, channels: C } = info;
+  /*
+   * Crop the rim away before separating anything.
+   *
+   * The tile has a bevelled edge that is a shade darker than its face, which the
+   * threshold below reads as mark and lifts along with the house — leaving a faint
+   * rounded-square outline floating on the finished icon, the very ghost border
+   * this whole approach exists to remove. The house sits well within this crop.
+   */
+  const inset = 0.07;
+  const inner = await sharp(trimmed)
+    .extract({
+      left: Math.round(meta.width! * inset),
+      top: Math.round(meta.height! * inset),
+      width: Math.round(meta.width! * (1 - inset * 2)),
+      height: Math.round(meta.height! * (1 - inset * 2)),
+    })
+    .png()
+    .toBuffer();
 
-  let minX = W;
-  let minY = H;
-  let maxX = 0;
-  let maxY = 0;
+  const { data, info } = await sharp(inner).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
+  const { width, height, channels } = info;
+  const [lo, hi] = art.band;
 
-  for (let y = 0; y < H; y += 1) {
-    for (let x = 0; x < W; x += 1) {
-      const i = (y * W + x) * C;
-      if ((data[i] + data[i + 1] + data[i + 2]) / 3 > 28) {
-        if (x < minX) minX = x;
-        if (x > maxX) maxX = x;
-        if (y < minY) minY = y;
-        if (y > maxY) maxY = y;
-      }
-    }
+  const out = Buffer.alloc(width * height * 4);
+  for (let i = 0, j = 0; i < data.length; i += channels, j += 4) {
+    const luminance = (data[i] + data[i + 1] + data[i + 2]) / 3;
+    const ramp = Math.min(1, Math.max(0, (luminance - lo) / (hi - lo)));
+    const coverage = art.markIsLight ? ramp : 1 - ramp;
+
+    out[j] = data[i];
+    out[j + 1] = data[i + 1];
+    out[j + 2] = data[i + 2];
+    // Multiplied by the artwork's own alpha so the transparent surround stays out.
+    out[j + 3] = Math.round(coverage * (data[i + 3] ?? 255));
   }
-  return { left: minX, top: minY, width: maxX - minX + 1, height: maxY - minY + 1 };
-}
 
-/**
- * The tile's opaque interior: square, full bleed, with no rounded corner left in it.
- *
- * The crop is stepped inwards and the four corners tested against the artwork until
- * all of them land on tile rather than on the black surround or its shadow. The two
- * tiles clear at slightly different points, so measuring beats assuming.
- */
-async function faceOf(file: string) {
-  const bounds = await tileBounds(file);
-  const { data, info } = await sharp(file).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
-  const { width: W, channels: C } = info;
-
-  const at = (x: number, y: number) => {
-    const i = (y * W + x) * C;
-    return [data[i], data[i + 1], data[i + 2]] as const;
-  };
-
-  // Tile is either a bright face or a blue-dominant navy. The black surround and
-  // its desaturated grey shadow pass neither test.
-  const isTile = ([r, g, b]: readonly [number, number, number]) =>
-    (r + g + b) / 3 > 60 || (b > 22 && b > r + 6);
-
-  const side = Math.min(bounds.width, bounds.height);
-  const cx = bounds.left + Math.round(bounds.width / 2);
-  const cy = bounds.top + Math.round(bounds.height / 2);
-
-  let inset = 0;
-  for (let step = 0; step <= 0.32; step += 0.005) {
-    const half = Math.round((side / 2) * (1 - step * 2));
-    const corners = [
-      at(cx - half, cy - half),
-      at(cx + half, cy - half),
-      at(cx - half, cy + half),
-      at(cx + half, cy + half),
-    ];
-    if (corners.every(isTile)) {
-      inset = step + CORNER_MARGIN;
-      break;
-    }
-  }
-  if (!inset) throw new Error(`Could not find a clean crop for ${path.basename(file)}`);
-
-  const half = Math.round((side / 2) * (1 - inset * 2));
-  console.log(
-    `  ${path.basename(file)}: corners clear at ${((inset - CORNER_MARGIN) * 100).toFixed(1)}%, cropping at ${(inset * 100).toFixed(1)}%`,
+  /*
+   * Clear the corners.
+   *
+   * Cropping further would start clipping the roof, but the leftover specks are
+   * always in the corners — they are the tile's rim highlight catching the light,
+   * and the house never reaches there. A generously rounded mask removes them and
+   * leaves the mark itself untouched.
+   */
+  const radius = Math.round(Math.min(width, height) * 0.3);
+  const cornerMask = Buffer.from(
+    `<svg width="${width}" height="${height}" xmlns="http://www.w3.org/2000/svg">
+       <rect width="${width}" height="${height}" rx="${radius}" ry="${radius}" fill="#fff"/>
+     </svg>`,
   );
 
-  return sharp(file)
-    .extract({ left: cx - half, top: cy - half, width: half * 2, height: half * 2 })
+  const keyed = await sharp(out, { raw: { width, height, channels: 4 } }).png().toBuffer();
+
+  return sharp(keyed)
+    .composite([{ input: cornerMask, blend: 'dest-in' }])
+    .trim()
     .png()
     .toBuffer();
 }
 
 /**
- * Scales the face slightly in, then grows its edges out to fill the square.
+ * Averages a rectangle of the artwork, as a hex colour.
  *
- * The border is grown from a blurred copy rather than the sharp one. Replicating
- * edge pixels directly smears whatever sits against that edge: a highlight becomes
- * a bright streak, a stray bevel pixel becomes a dark notch. Blurring first averages
- * those away, so what runs off the edge is the colour the gloss was already heading
- * towards — the surface continuing, rather than padding stuck on.
+ * Each crop is written out to a buffer before measuring, because sharp's stats()
+ * reads the source image and ignores operations queued ahead of it — measuring the
+ * pipeline directly returns the whole-image average for every region, which looks
+ * plausible and is wrong.
  */
-async function render(face: Buffer, size: number) {
-  const inner = Math.round(size * FACE_FRACTION);
-  const pad = Math.round((size - inner) / 2);
-  const rest = size - inner - pad;
-
-  const base = await sharp(face)
-    .resize(inner, inner, { kernel: 'lanczos3' })
-    .blur(Math.max(1, size * 0.04))
-    .extend({ top: pad, bottom: rest, left: pad, right: rest, extendWith: 'copy' })
+async function sample(tile: Buffer, x: number, y: number, w: number, h: number) {
+  const cropped = await sharp(tile)
+    .extract({ left: Math.round(x), top: Math.round(y), width: Math.round(w), height: Math.round(h) })
     .png()
     .toBuffer();
+  const { channels } = await sharp(cropped).stats();
+  const [r, g, b] = channels.slice(0, 3).map((c) => Math.round(c.mean));
+  return `#${[r, g, b].map((v) => v.toString(16).padStart(2, '0')).join('')}`;
+}
 
-  const crisp = await sharp(face).resize(inner, inner, { kernel: 'lanczos3' }).png().toBuffer();
+/**
+ * A full-bleed background in the tile's own colours.
+ *
+ * Built from four samples taken where the house does not reach — above the roof,
+ * below the base, and outside each wall — rather than by blurring the artwork.
+ * Blurring seemed simpler but averages the house into the result: the white tile
+ * came out blue, because most of what was being blurred was the blue mark.
+ *
+ * The samples become a diagonal gradient plus a soft sheen, which keeps the lit
+ * look of the original: brighter at the top, deeper towards the bottom right.
+ */
+async function backgroundOf(tile: Buffer, size: number) {
+  const meta = await sharp(tile).metadata();
+  const W = meta.width!;
+  const H = meta.height!;
 
-  return sharp(base).composite([{ input: crisp, top: pad, left: pad }]).png({ compressionLevel: 9 }).toBuffer();
+  const top = await sample(tile, W * 0.25, H * 0.04, W * 0.5, H * 0.05);
+  const bottom = await sample(tile, W * 0.25, H * 0.91, W * 0.5, H * 0.04);
+  const left = await sample(tile, W * 0.04, H * 0.45, W * 0.05, H * 0.1);
+  const right = await sample(tile, W * 0.91, H * 0.45, W * 0.05, H * 0.1);
+
+  const svg = `<svg width="${size}" height="${size}" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <linearGradient id="field" x1="0" y1="0" x2="0.85" y2="1">
+          <stop offset="0%" stop-color="${top}"/>
+          <stop offset="45%" stop-color="${left}"/>
+          <stop offset="100%" stop-color="${bottom}"/>
+        </linearGradient>
+        <linearGradient id="sheen" x1="0" y1="0" x2="0.3" y2="1">
+          <stop offset="0%" stop-color="#ffffff" stop-opacity="0.22"/>
+          <stop offset="55%" stop-color="#ffffff" stop-opacity="0.03"/>
+          <stop offset="100%" stop-color="${right}" stop-opacity="0.12"/>
+        </linearGradient>
+      </defs>
+      <rect width="${size}" height="${size}" fill="url(#field)"/>
+      <path d="M0,0 H${size} V${size * 0.44} Q${size * 0.5},${size * 0.6} 0,${size * 0.44} Z" fill="url(#sheen)"/>
+    </svg>`;
+
+  return sharp(Buffer.from(svg)).png().toBuffer();
+}
+
+async function render(tile: Buffer, mark: Buffer, size: number) {
+  const background = await backgroundOf(tile, size);
+
+  const meta = await sharp(mark).metadata();
+  const target = Math.round(size * MARK_FRACTION);
+  const scale = target / Math.max(meta.width!, meta.height!);
+  const w = Math.max(1, Math.round(meta.width! * scale));
+  const h = Math.max(1, Math.round(meta.height! * scale));
+
+  const scaled = await sharp(mark).resize(w, h, { kernel: 'lanczos3' }).png().toBuffer();
+
+  return sharp(background)
+    .composite([{ input: scaled, left: Math.round((size - w) / 2), top: Math.round((size - h) / 2) }])
+    .png({ compressionLevel: 9 })
+    .toBuffer();
 }
 
 async function main() {
-  const apps = [
-    { name: 'app', src: path.join(SRC, 'app-tile.png') },
-    { name: 'core', src: path.join(SRC, 'core-tile.png') },
-  ];
+  for (const art of ART) {
+    const file = path.join(SRC, art.file);
+    if (!fs.existsSync(file)) throw new Error(`Missing artwork: ${file}`);
 
-  for (const app of apps) {
-    if (!fs.existsSync(app.src)) throw new Error(`Missing artwork: ${app.src}`);
-    const face = await faceOf(app.src);
+    const tile = await sharp(file).trim().png().toBuffer();
+    const mark = await liftMark(file, art);
+    const meta = await sharp(mark).metadata();
+    console.log(`  ${art.file}: mark lifted at ${meta.width}x${meta.height}`);
 
-    /*
-     * The same full-bleed face for both `any` and `maskable`.
-     *
-     * Maskable icons normally pull the mark further in to survive cropping, but the
-     * house is centred and a launcher mask takes the corners, not the middle. A
-     * second, more inset version would only make the icon look smaller than every
-     * other app on the home screen for no real gain.
-     */
     for (const size of [192, 512]) {
-      const rendered = await render(face, size);
-      await fs.promises.writeFile(path.join(OUT, `icon-${app.name}-${size}.png`), rendered);
-      await fs.promises.writeFile(path.join(OUT, `icon-${app.name}-maskable-${size}.png`), rendered);
+      const rendered = await render(tile, mark, size);
+      // Identical for both purposes: the mark is already inside the safe area, so a
+      // separate, more inset maskable version would only look smaller for no gain.
+      await fs.promises.writeFile(path.join(OUT, `icon-${art.name}-${size}.png`), rendered);
+      await fs.promises.writeFile(path.join(OUT, `icon-${art.name}-maskable-${size}.png`), rendered);
     }
 
-    // iOS has no maskable concept: it rounds whatever it is given, so it wants
-    // exactly this — full bleed, with nothing already rounded about it.
-    await fs.promises.writeFile(path.join(OUT, `apple-icon-${app.name}.png`), await render(face, 180));
+    // iOS applies its own rounding and has no maskable concept, so it wants exactly
+    // this: a full-bleed square with nothing already rounded about it.
+    await fs.promises.writeFile(path.join(OUT, `apple-icon-${art.name}.png`), await render(tile, mark, 180));
   }
 
   console.log('\nDone.');
