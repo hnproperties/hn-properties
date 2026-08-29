@@ -8,6 +8,9 @@ export const metadata: Metadata = {
   // Its own manifest, so installing the CRM gives staff a separate icon that
   // opens straight onto the desk instead of the public homepage.
   manifest: '/crm.webmanifest',
+  // Its own home screen mark, so HN Core and the marketplace app are told apart
+  // at a glance on a phone that has both.
+  icons: { icon: [{ url: '/icon-core-192.png', type: 'image/png', sizes: '192x192' }], apple: [{ url: '/apple-icon-core.png', sizes: '180x180' }] },
 };
 
 export default function CrmLayout({ children }: { children: React.ReactNode }) {
@@ -19,7 +22,7 @@ export default function CrmLayout({ children }: { children: React.ReactNode }) {
         caches anything under /crm — see public/sw.js. Staff get the home screen
         icon and the app window; the data still comes from the network every time.
       */}
-      <PwaSetup />
+      <PwaSetup surface="crm" />
     </CrmShell>
   );
 }

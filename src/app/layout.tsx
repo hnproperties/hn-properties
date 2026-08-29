@@ -21,7 +21,9 @@ export const metadata: Metadata = {
       { url: '/favicon-32.png', type: 'image/png', sizes: '32x32' },
       { url: '/icon.png', type: 'image/png', sizes: '512x512' },
     ],
-    apple: [{ url: '/apple-icon.png', sizes: '180x180' }],
+    // iOS does not support maskable icons; it rounds whatever it is given, so a
+    // full-bleed square is exactly what it wants. The CRM overrides this with its own.
+    apple: [{ url: '/apple-icon-app.png', sizes: '180x180' }],
     shortcut: ['/favicon.ico'],
   },
   openGraph: { type: 'website', siteName: site.name, locale: 'en_IN' },

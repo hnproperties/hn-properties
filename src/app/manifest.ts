@@ -26,12 +26,14 @@ export default function manifest(): MetadataRoute.Manifest {
     lang: 'en-IN',
     categories: ['business', 'lifestyle', 'shopping'],
     icons: [
-      { src: '/icon-192.png', sizes: '192x192', type: 'image/png', purpose: 'any' },
-      { src: '/icon.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
-      // Launchers crop icons to their own shape; these have the mark inset so
-      // nothing important is lost at the edges.
-      { src: '/icon-maskable-192.png', sizes: '192x192', type: 'image/png', purpose: 'maskable' },
-      { src: '/icon-maskable-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
+      { src: '/icon-app-192.png', sizes: '192x192', type: 'image/png', purpose: 'any' },
+      { src: '/icon-app-512.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
+      // Maskable icons are cropped hard — up to 20% off each side — so these carry
+      // the same artwork with the mark pulled further in. The background reaches
+      // every edge, which is what stops the launcher's shape cutting a border into
+      // an icon that already had rounded corners of its own.
+      { src: '/icon-app-maskable-192.png', sizes: '192x192', type: 'image/png', purpose: 'maskable' },
+      { src: '/icon-app-maskable-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
     ],
     // Long-press the installed icon to jump straight to a section.
     shortcuts: [
