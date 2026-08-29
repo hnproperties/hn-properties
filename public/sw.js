@@ -22,7 +22,15 @@ const OFFLINE_URL = '/offline.html';
 /** Never cached, never served from cache. Everything that is private or personal. */
 const NEVER_CACHE = [/^\/api\//, /^\/crm(\/|$)/, /^\/partner(\/|$)/, /^\/login(\/|$)/];
 
-const isPrivate = (pathname) => NEVER_CACHE.some((pattern) => pattern.test(pathname));
+/*
+ * On the CRM's own host every path is the desk, including "/" and "/leads", so the
+ * path patterns above match nothing and the whole site would be cached to disk —
+ * owner phone numbers left readable on a shared or lost phone long after the
+ * session expired. The host check has to come first for that reason.
+ */
+const isCrmHost = self.location.hostname.startsWith('crm.');
+
+const isPrivate = (pathname) => isCrmHost || NEVER_CACHE.some((pattern) => pattern.test(pathname));
 
 /** Build output and icons — content-hashed or rarely changed, so safe to keep. */
 const isStaticAsset = (url) =>
@@ -33,8 +41,12 @@ const isStaticAsset = (url) =>
   /\.(png|jpg|jpeg|webp|avif|svg|woff2?)$/.test(url.pathname);
 
 self.addEventListener('install', (event) => {
+  // Nothing is precached on the CRM host — there is nothing there it may keep.
   event.waitUntil(
-    caches.open(STATIC_CACHE).then((cache) => cache.addAll([OFFLINE_URL])).then(() => self.skipWaiting()),
+    (isCrmHost
+      ? Promise.resolve()
+      : caches.open(STATIC_CACHE).then((cache) => cache.addAll([OFFLINE_URL]))
+    ).then(() => self.skipWaiting()),
   );
 });
 

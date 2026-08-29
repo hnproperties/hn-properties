@@ -7,7 +7,7 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false },
   // Its own manifest, so installing the CRM gives staff a separate icon that
   // opens straight onto the desk instead of the public homepage.
-  manifest: '/crm.webmanifest',
+  manifest: '/api/crm-manifest',
   // Its own home screen mark, so HN Core and the marketplace app are told apart
   // at a glance on a phone that has both.
   icons: { icon: [{ url: '/icon-core-192.png', type: 'image/png', sizes: '192x192' }], apple: [{ url: '/apple-icon-core.png', sizes: '180x180' }] },
