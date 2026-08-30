@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { SESSION_COOKIE, readSessionToken } from './lib/session';
+import { OWNER_COOKIE, readOwnerToken } from './lib/owner-token';
 
 /**
  * Edge gate. Runs before any handler, so an unauthenticated request never reaches
@@ -31,6 +32,21 @@ const PROTECTED = [
   '/api/audit', '/api/dashboard', '/api/lookups', '/api/reports', '/api/search',
   '/api/uploads', '/api/locations', '/api/crm',
 ];
+
+/**
+ * Pages an owner must be signed in to see.
+ *
+ * Checked here rather than inside the page, and that is the whole point. A redirect
+ * from inside a page component happens after Next has already begun rendering: the
+ * header, footer and page shell paint, then the redirect fires, and the visitor
+ * sees a half-drawn page flash past on the way to sign-in. Deciding at the edge
+ * means the browser is sent straight to sign-in and never paints the page at all.
+ *
+ * The page-level checks stay as well. Middleware can only verify that the token is
+ * valid — it cannot reach the database from the edge to confirm the account is
+ * still active — so this is about the transition, not about security.
+ */
+const OWNER_PAGES = ['/sell', '/give-on-rent', '/account'];
 
 const SUBDOMAIN_PASSTHROUGH = ['/api', '/_next', '/login', '/partner', '/icon', '/apple-icon', '/favicon', '/sw.js', '/offline.html', '/.well-known'];
 
@@ -67,6 +83,18 @@ export async function middleware(req: NextRequest) {
     moved.pathname = url.pathname.replace(/^\/crm/, '') || '/';
     return NextResponse.redirect(moved, 308);
   }
+  // Owner pages, checked before the page begins rendering. Not applicable on the
+  // CRM host, which serves the desk and has its own gate below.
+  if (!isCrmHost && OWNER_PAGES.some((p) => url.pathname === p || url.pathname.startsWith(`${p}/`))) {
+    const owner = await readOwnerToken(req.cookies.get(OWNER_COOKIE)?.value);
+    if (!owner) {
+      const target = url.clone();
+      target.pathname = '/sign-in';
+      target.search = `?next=${encodeURIComponent(url.pathname)}`;
+      return NextResponse.redirect(target);
+    }
+  }
+
   const alreadyPrefixed = url.pathname === '/crm' || url.pathname.startsWith('/crm/');
   if (
     isCrmHost &&
