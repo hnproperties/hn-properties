@@ -1144,13 +1144,13 @@ model Counter {
 // distinct set of routes keeps the two apart by construction rather than by care.
 // ---------------------------------------------------------------------------
 
-/** How an account proved who it is. More arrive when phone sign-in ships. */
+/// How an account proved who it is. More arrive when phone sign-in ships.
 enum OwnerAuthMethod {
   GOOGLE
   PHONE_OTP
 }
 
-/** Lifecycle of an owner's request to change a listing's status. */
+/// Lifecycle of an owner's request to change a listing's status.
 enum OwnerRequestState {
   PENDING
   ACCEPTED
@@ -1190,14 +1190,12 @@ model OwnerAccount {
   @@index([ownerId])
 }
 
-/**
- * An owner telling us a property is sold or rented.
- *
- * Deliberately a request rather than an action. The owner never changes what is
- * live: this raises a notification, someone confirms it with them by phone, and a
- * staff member sets the listing status in the CRM. That keeps a listing HN has
- * written and priced under HN's control, and leaves a record of who asked and when.
- */
+/// An owner telling us a property is sold or rented.
+///
+/// Deliberately a request rather than an action. The owner never changes what is
+/// live: this raises a notification, someone confirms it with them by phone, and a
+/// staff member sets the listing status in the CRM. That keeps a listing HN has
+/// written and priced under HN's control, and leaves a record of who asked and when.
 model OwnerStatusRequest {
   id        String       @id @default(cuid())
   accountId String
