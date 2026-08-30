@@ -37,6 +37,10 @@ const NAV: NavItem[] = [
       { href: '/rent', label: 'Rent', hint: 'Residential and commercial rentals' },
       { href: '/sell', label: 'Sell', hint: 'List your property for sale' },
       { href: '/give-on-rent', label: 'Give on Rent', hint: 'Find a screened tenant' },
+      // Sits with the two listing actions because it is where those end up. Shown
+      // to everyone: someone not signed in is sent to sign in and then straight
+      // back here, which is a clearer route in than hiding the link until they are.
+      { href: '/account', label: 'Your Listed Properties', hint: 'See and manage what you have listed' },
     ],
   },
   { href: '/hot-deals', label: 'Hot Deals', artwork: true },
@@ -325,6 +329,10 @@ export default function SiteHeader() {
 
             <Link href="/post" onClick={() => setOpen(false)} className="btn btn-primary w-full">
               Post Your Property
+            </Link>
+
+            <Link href="/account" onClick={() => setOpen(false)} className="btn btn-ghost w-full">
+              Your Listed Properties
             </Link>
 
             {/*

@@ -2,6 +2,7 @@ import type { NextRequest } from 'next/server';
 import { revalidatePath } from 'next/cache';
 import { emitChange } from '@/lib/events';
 import { prisma } from '@/lib/prisma';
+import { currentOwner } from '@/lib/owner-session';
 import { ok, route, readJson, parse, clientIp } from '@/lib/api';
 import { ownerSubmissionSchema } from '@/lib/validators';
 import { tooMany } from '@/lib/errors';
@@ -55,6 +56,8 @@ export const POST = route(async (req: NextRequest) => {
     return ok({ received: true }, { status: 201 });
   }
 
+  const account = await currentOwner();
+
   const owner =
     (await prisma.owner.findFirst({ where: { phone: input.phone } })) ??
     (await prisma.owner.create({
@@ -69,6 +72,29 @@ export const POST = route(async (req: NextRequest) => {
         notes: input.preferredTime ? `Prefers contact: ${input.preferredTime}` : undefined,
       },
     }));
+
+  /*
+   * Tie the signed-in account to the owner record this submission created.
+   *
+   * Doing it here rather than by matching emails later is the reliable version:
+   * the person is signed in and submitting, so there is no guessing about whose
+   * property this is, and it appears under "Your Listed Properties" immediately.
+   *
+   * The guard matters. Owners are found by phone, so without it someone could type
+   * a number that already belongs to another owner and take over their record —
+   * along with every property and contact detail on it. A record already claimed by
+   * a different account is left exactly as it is; the property is still created and
+   * staff can sort out the overlap, which is rare and wants a human anyway.
+   */
+  if (account) {
+    const claimed = await prisma.ownerAccount.findFirst({
+      where: { ownerId: owner.id },
+      select: { id: true },
+    });
+    if (!claimed) {
+      await prisma.ownerAccount.update({ where: { id: account.id }, data: { ownerId: owner.id } });
+    }
+  }
 
   const property = await prisma.property.create({
     data: {

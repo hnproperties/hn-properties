@@ -1,4 +1,6 @@
 import type { Metadata } from 'next';
+import { redirect } from 'next/navigation';
+import { currentOwner } from '@/lib/owner-session';
 import PublicForm from '@/components/PublicForm';
 import { getPublicIndexes } from '@/lib/public-data';
 import { site, toOptions, AREA_UNITS, FACINGS, FURNISHINGS, OWNER_PROPERTY_TYPES, FIELD_TYPES } from '@/lib/constants';
@@ -30,6 +32,21 @@ export const metadata: Metadata = {
 };
 
 export default async function SellPage() {
+  /*
+   * Signed in before submitting, on purpose.
+   *
+   * The account is what ties the property to a person. Doing it at submission time
+   * means we know exactly whose listing it is, rather than trying to match an email
+   * afterwards and hoping it was the same one they gave Google. It is also what
+   * makes "Your Listed Properties" work the moment they submit.
+   *
+   * Only this page and its sibling are gated. Browsing stays open to everyone,
+   * including search engines — a login wall over the listings would take the site
+   * out of Google, which is where the buyers come from.
+   */
+  const owner = await currentOwner();
+  if (!owner) redirect('/sign-in?next=/sell');
+
   const { locations } = await getPublicIndexes();
 
   return (
