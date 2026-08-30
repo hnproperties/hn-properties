@@ -343,12 +343,28 @@ export default function SiteHeader() {
               Download Our App
             </button>
 
-            <div className="flex items-center justify-center gap-5 pt-1 text-sm">
-              <a href={`tel:${site.phone}`} className="font-semibold text-[var(--brand)]">
+            {/*
+              Two separate destinations, so they get room to be told apart. Set side
+              by side in small grey text they read as one line and are easy to hit by
+              mistake — each is now its own full-width row at a comfortable tap size,
+              with an icon to make the difference obvious at a glance.
+            */}
+            <div className="mt-1 flex flex-col gap-2 border-t pt-4">
+              <a
+                href={`tel:${site.phone}`}
+                className="flex items-center justify-center gap-2.5 rounded-xl bg-[var(--brand-soft)] py-3 text-base font-semibold text-[var(--brand)]"
+              >
+                <PhoneIcon className="h-5 w-5" />
                 Call {site.phone}
               </a>
               {site.instagram && (
-                <a href={site.instagram} target="_blank" rel="noopener noreferrer" className="text-[var(--muted)]">
+                <a
+                  href={site.instagram}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center justify-center gap-2.5 rounded-xl py-3 text-base font-medium ring-1 ring-black/5"
+                >
+                  <InstagramIcon className="h-5 w-5 text-[#C13584]" />
                   Instagram
                 </a>
               )}

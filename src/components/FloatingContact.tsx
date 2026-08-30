@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { site, waLink } from '@/lib/constants';
-import { WhatsAppIcon, PhoneIcon, InstagramIcon } from './SocialIcons';
+import { WhatsAppIcon, PhoneIcon } from './SocialIcons';
 
 /**
  * Sticky contact buttons. Most visitors arrive on a phone, so the two things they
@@ -14,6 +14,11 @@ import { WhatsAppIcon, PhoneIcon, InstagramIcon } from './SocialIcons';
  * phone is about two fifths of the screen and lands squarely on top of the hero
  * cards. One button that opens a labelled menu costs an extra tap on the actions
  * people use least, and gives back the screen space on every other page.
+ *
+ * The menu holds the two listing actions and nothing else. Following on Instagram
+ * is a different kind of intention from listing a property, and mixing them made
+ * the menu read as a list of odds and ends; Instagram sits in the header menu,
+ * where the rest of the site's links live.
  *
  * Mobile only, deliberately. On a laptop the header already carries Sell, Give on
  * Rent and Instagram, so repeating them in a floating menu would be clutter with
@@ -62,37 +67,22 @@ export default function FloatingContact() {
 
       <div className="fixed bottom-5 right-5 z-50 flex flex-col items-end gap-3 print:hidden">
         {open && (
-          <div className="flex w-56 flex-col gap-2 sm:hidden" role="menu" aria-label="More options">
+          <div className="flex w-64 flex-col gap-2.5 sm:hidden" role="menu" aria-label="List your property">
             {actions.map((action) => (
               <Link
                 key={action.href}
                 href={action.href}
                 role="menuitem"
                 onClick={() => setOpen(false)}
-                className="flex items-center gap-3 rounded-2xl bg-[var(--plate)] px-4 py-3 shadow-xl ring-1 ring-black/5"
+                className="flex items-center gap-3.5 rounded-2xl bg-[var(--plate)] px-4 py-4 shadow-xl ring-1 ring-black/5"
               >
-                <span aria-hidden="true" className="text-lg">{action.icon}</span>
+                <span aria-hidden="true" className="text-2xl">{action.icon}</span>
                 <span className="min-w-0">
-                  <span className="block text-sm font-semibold">{action.label}</span>
-                  <span className="block text-xs text-[var(--muted)]">{action.hint}</span>
+                  <span className="block text-base font-semibold">{action.label}</span>
+                  <span className="block text-sm text-[var(--muted)]">{action.hint}</span>
                 </span>
               </Link>
             ))}
-
-            <a
-              href={site.instagram}
-              target="_blank"
-              rel="noopener noreferrer"
-              role="menuitem"
-              onClick={() => setOpen(false)}
-              className="flex items-center gap-3 rounded-2xl bg-[var(--plate)] px-4 py-3 shadow-xl ring-1 ring-black/5"
-            >
-              <InstagramIcon className="h-5 w-5 text-[#C13584]" />
-              <span className="min-w-0">
-                <span className="block text-sm font-semibold">Instagram</span>
-                <span className="block text-xs text-[var(--muted)]">See our latest listings</span>
-              </span>
-            </a>
           </div>
         )}
 
@@ -100,7 +90,7 @@ export default function FloatingContact() {
           ref={toggleRef}
           type="button"
           aria-expanded={open}
-          aria-label={open ? 'Close more options' : 'Sell, give on rent, or follow us'}
+          aria-label={open ? 'Close menu' : 'Sell or give your property on rent'}
           onClick={() => setOpen((value) => !value)}
           className="flex h-14 w-14 items-center justify-center rounded-full bg-[var(--brand)] text-white shadow-xl transition hover:bg-[var(--brand-dark)] sm:hidden"
         >
