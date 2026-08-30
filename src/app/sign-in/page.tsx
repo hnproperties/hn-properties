@@ -81,8 +81,8 @@ export default async function SignInPage({
   return (
     <main className="relative min-h-screen overflow-hidden bg-[#0b2a52]">
       {/* Full-bleed night photograph, dimmed so white text holds up over it. */}
-      <Image src="/hero.jpg" alt="" fill priority sizes="100vw" className="object-cover" />
-      <div className="absolute inset-0 bg-gradient-to-br from-[#0b2a52]/95 via-[#0d2f5c]/85 to-[#0b2a52]/70" />
+      <Image src="/hero.jpg" alt="" fill priority sizes="100vw" className="animate-arrive object-cover" />
+      <div className="animate-arrive absolute inset-0 bg-gradient-to-br from-[#0b2a52]/95 via-[#0d2f5c]/85 to-[#0b2a52]/70" />
 
       <div className="relative mx-auto flex min-h-screen max-w-6xl flex-col justify-center px-4 py-10 lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(0,520px)] lg:items-center lg:gap-16 lg:px-8">
         {/*
@@ -90,7 +90,7 @@ export default async function SignInPage({
           phone — where the mockup lays the three points out in a single row rather
           than stacking them, so they take one band of height instead of three.
         */}
-        <aside className="order-3 mx-auto mt-10 w-full max-w-md lg:order-1 lg:mt-0 lg:max-w-sm">
+        <aside className="animate-arrive-late order-3 mx-auto mt-10 w-full max-w-md lg:order-1 lg:mt-0 lg:max-w-sm">
           <div className="grid grid-cols-3 divide-x divide-white/15 lg:grid-cols-1 lg:divide-x-0 lg:divide-y">
             {POINTS.map((point) => (
               <div
@@ -130,7 +130,7 @@ export default async function SignInPage({
           </div>
         </aside>
 
-        <div className="order-1 mx-auto w-full max-w-md lg:order-2">
+        <div className="animate-arrive-card order-1 mx-auto w-full max-w-md lg:order-2">
           <div className="text-center">
             <span className="inline-flex items-center gap-2.5 rounded-2xl bg-white px-5 py-3 shadow-lg">
               <Image src="/logo.png" alt="" width={34} height={34} className="h-8 w-8 object-contain" />

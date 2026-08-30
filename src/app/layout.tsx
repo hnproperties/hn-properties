@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import RouteProgress from '@/components/RouteProgress';
 import { Plus_Jakarta_Sans, Inter, IBM_Plex_Mono } from 'next/font/google';
 import { site } from '@/lib/constants';
 import './globals.css';
@@ -34,6 +35,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en" className={`${display.variable} ${body.variable} ${mono.variable}`}>
       <body style={{ fontFamily: 'var(--font-body), system-ui, sans-serif' }} className="antialiased">
+        <RouteProgress />
         {children}
       </body>
     </html>
