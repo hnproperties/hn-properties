@@ -21,10 +21,12 @@ import { prisma } from './prisma';
 export const OWNER_COOKIE = 'hn_owner';
 
 const secret = () => {
-  const value = process.env.SESSION_SECRET;
-  if (!value) throw new Error('SESSION_SECRET is not set');
-  // A distinct salt so an owner token can never verify as a staff token, even if
-  // the two were somehow swapped.
+  // AUTH_SECRET, matching lib/session.ts — the same secret the staff login already
+  // uses, so there is one value to rotate rather than two that can drift apart.
+  const value = process.env.AUTH_SECRET;
+  if (!value) throw new Error('AUTH_SECRET is not set');
+  // Salted differently, so an owner token can never verify as a staff token even
+  // though both are signed with the same underlying secret.
   return new TextEncoder().encode(`${value}::owner`);
 };
 
