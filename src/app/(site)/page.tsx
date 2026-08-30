@@ -214,16 +214,35 @@ export default async function HomePage() {
       {/* Recent + coming soon */}
       <section className="wrap py-14">
         <h2 className="display text-2xl text-[var(--navy)] sm:text-3xl">Recently Added</h2>
-        <div className="mt-6 grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          {recent.map((listing) => <PropertyCard key={listing.id} listing={listing} compact />)}
+        {/*
+          A swipe rail on a phone, the same grid as before from sm up.
+
+          Stacked vertically, four property cards were most of a phone screen each,
+          so the section below them was a long way down and most people never
+          reached it. Sideways, the whole set is one gesture — and a card peeking in
+          from the right is what tells someone there is more without a caption
+          saying so. `snap-x` makes each swipe settle on a card rather than
+          drifting, which is what makes it feel like the photo galleries.
+        */}
+        <div className="-mx-4 mt-6 flex snap-x snap-mandatory gap-4 overflow-x-auto px-4 pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:mx-0 sm:grid sm:snap-none sm:gap-6 sm:overflow-visible sm:px-0 sm:pb-0 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          {recent.map((listing) => (
+            <div key={listing.id} className="w-[85%] flex-none snap-start sm:w-auto">
+              <PropertyCard listing={listing} compact />
+            </div>
+          ))}
         </div>
 
         {comingSoon.length > 0 && (
           <>
             <h2 className="display mt-14 text-2xl text-[var(--navy)]">Coming Soon</h2>
             <p className="mt-1 text-sm text-[var(--muted)]">Properties we are preparing to list. Call us to hear about them first.</p>
-            <div className="mt-6 grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-              {comingSoon.map((listing) => <PropertyCard key={listing.id} listing={listing} compact />)}
+            {/* Same treatment, so the two shelves behave alike. */}
+            <div className="-mx-4 mt-6 flex snap-x snap-mandatory gap-4 overflow-x-auto px-4 pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:mx-0 sm:grid sm:snap-none sm:gap-6 sm:overflow-visible sm:px-0 sm:pb-0 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+              {comingSoon.map((listing) => (
+                <div key={listing.id} className="w-[85%] flex-none snap-start sm:w-auto">
+                  <PropertyCard listing={listing} compact />
+                </div>
+              ))}
             </div>
           </>
         )}

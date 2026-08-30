@@ -293,31 +293,62 @@ export default function SiteHeader() {
               </button>
             </form>
 
-            {/* Every destination as an equal glass tile, in two even columns —
-                the old mix of bare links, a centred image and one wide button
-                read as a jumble. Dropdown parents are flattened so nothing is
-                two taps away. */}
+            {/*
+              Three bands, most-used first: where you are and who you are, then
+              everywhere else, then the three actions.
+
+              Home and Profile lead because they are the two anyone reaches for
+              without reading — so they get their own row at a larger size, and
+              Profile is tinted to separate it from the plain destinations below.
+            */}
+            <div className="grid grid-cols-2 gap-3">
+              <Link
+                href="/"
+                onClick={() => setOpen(false)}
+                className={`flex min-h-[52px] items-center justify-center rounded-[13px] px-3 py-2 text-center text-[15px] font-semibold transition ${
+                  pathname === '/' ? GLASS_ACTIVE : MENU_TILE
+                }`}
+              >
+                Home
+              </Link>
+              <Link
+                href="/account/profile"
+                onClick={() => setOpen(false)}
+                className="flex min-h-[52px] items-center justify-center rounded-[13px] border border-[var(--brand)]/25 bg-[var(--brand-soft)] px-3 py-2 text-center text-[15px] font-semibold text-[var(--brand)] transition active:scale-[0.97]"
+              >
+                Profile
+              </Link>
+            </div>
+
+            {/*
+              Everything else, flattened out of the dropdowns so nothing is two taps
+              away. Home is filtered out because it now has its own row above, and
+              /account because it is one of the three actions at the bottom — it
+              appeared in both places until now.
+            */}
             <div className="grid grid-cols-2 gap-3">
               {NAV.flatMap((item) =>
                 item.children
                   ? item.children.map((child) => ({ href: child.href, label: child.label, artwork: false }))
                   : [{ href: item.href, label: item.label, artwork: !!item.artwork }],
-              ).map((entry) => (
-                <Link
-                  key={entry.href}
-                  href={entry.href}
-                  onClick={() => setOpen(false)}
-                  className={`flex min-h-[46px] items-center justify-center rounded-[13px] px-3 py-2 text-center text-[13.5px] font-semibold transition ${
-                    pathname === entry.href ? GLASS_ACTIVE : MENU_TILE
-                  }`}
-                >
-                  {entry.artwork ? (
-                    <Image src="/hot-deals-banner.png" alt="Hot Deals" width={1000} height={563} className="h-9 w-auto" />
-                  ) : (
-                    entry.label
-                  )}
-                </Link>
-              ))}
+              )
+                .filter((entry) => entry.href !== '/' && entry.href !== '/account')
+                .map((entry) => (
+                  <Link
+                    key={entry.href}
+                    href={entry.href}
+                    onClick={() => setOpen(false)}
+                    className={`flex min-h-[46px] items-center justify-center rounded-[13px] px-3 py-2 text-center text-[13.5px] font-semibold transition ${
+                      pathname === entry.href ? GLASS_ACTIVE : MENU_TILE
+                    }`}
+                  >
+                    {entry.artwork ? (
+                      <Image src="/hot-deals-banner.png" alt="Hot Deals" width={1000} height={563} className="h-9 w-auto" />
+                    ) : (
+                      entry.label
+                    )}
+                  </Link>
+                ))}
               <Link
                 href="/requirement"
                 onClick={() => setOpen(false)}
@@ -327,11 +358,17 @@ export default function SiteHeader() {
               </Link>
             </div>
 
-            <Link href="/post" onClick={() => setOpen(false)} className="btn btn-primary w-full">
+            {/*
+              The three actions, each a different colour so they are told apart at a
+              glance: brand blue to list, gold to manage what is listed, navy to
+              install. All one size up from the tiles above, because these are the
+              things people came to the menu to do.
+            */}
+            <Link href="/post" onClick={() => setOpen(false)} className="btn btn-primary w-full text-lg">
               Post Your Property
             </Link>
 
-            <Link href="/account" onClick={() => setOpen(false)} className="btn btn-ghost w-full">
+            <Link href="/account" onClick={() => setOpen(false)} className="btn btn-accent w-full text-lg">
               Your Listed Properties
             </Link>
 
@@ -342,7 +379,7 @@ export default function SiteHeader() {
             */}
             <button
               type="button"
-              className="btn btn-ghost w-full"
+              className="btn btn-navy w-full text-lg"
               onClick={() => {
                 setOpen(false);
                 openInstallDialog();
