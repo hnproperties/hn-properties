@@ -349,12 +349,12 @@ export default function SiteHeader() {
               mistake — each is now its own full-width row at a comfortable tap size,
               with an icon to make the difference obvious at a glance.
             */}
-            <div className="mt-1 flex flex-col gap-2 border-t pt-4">
+            <div className="mt-1 flex flex-col gap-2.5 border-t pt-4">
               <a
                 href={`tel:${site.phone}`}
-                className="flex items-center justify-center gap-2.5 rounded-xl bg-[var(--brand-soft)] py-3 text-base font-semibold text-[var(--brand)]"
+                className="flex items-center justify-center gap-3 rounded-xl bg-[var(--brand-soft)] py-3.5 text-lg font-semibold text-[var(--brand)]"
               >
-                <PhoneIcon className="h-5 w-5" />
+                <PhoneIcon className="h-6 w-6" />
                 Call {site.phone}
               </a>
               {site.instagram && (
@@ -362,9 +362,9 @@ export default function SiteHeader() {
                   href={site.instagram}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex items-center justify-center gap-2.5 rounded-xl py-3 text-base font-medium ring-1 ring-black/5"
+                  className="flex items-center justify-center gap-3 rounded-xl py-3.5 text-lg font-semibold ring-1 ring-black/5"
                 >
-                  <InstagramIcon className="h-5 w-5 text-[#C13584]" />
+                  <InstagramIcon className="h-6 w-6 text-[#C13584]" />
                   Instagram
                 </a>
               )}
