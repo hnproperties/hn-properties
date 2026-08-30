@@ -222,6 +222,7 @@ enum SourceType {
 model Property {
   id       String @id @default(cuid())
   code     String @unique // internal: HNP-JBP-000124
+  statusRequests OwnerStatusRequest[]
   title    String
   summary  String? @db.Text
 
@@ -559,6 +560,7 @@ model Owner {
   updatedAt      DateTime      @updatedAt
 
   properties Property[]
+  account    OwnerAccount?
   followUps  FollowUp[]
   deals      Deal[]     @relation("DealSeller")
 
@@ -1128,4 +1130,92 @@ model Setting {
 model Counter {
   key   String @id
   value Int    @default(0)
+}
+
+
+// ---------------------------------------------------------------------------
+// Owner-facing accounts
+//
+// Separate from User on purpose. User is staff: it carries a role, a permission
+// set and a rank, and everything in the CRM is gated on those. An owner signing in
+// to look at their own listing has no role and must never acquire one, so giving
+// them a User row would mean one bad permission grant away from a member of the
+// public reading the desk. A distinct model, a distinct session cookie and a
+// distinct set of routes keeps the two apart by construction rather than by care.
+// ---------------------------------------------------------------------------
+
+/** How an account proved who it is. More arrive when phone sign-in ships. */
+enum OwnerAuthMethod {
+  GOOGLE
+  PHONE_OTP
+}
+
+/** Lifecycle of an owner's request to change a listing's status. */
+enum OwnerRequestState {
+  PENDING
+  ACCEPTED
+  DECLINED
+}
+
+model OwnerAccount {
+  id        String  @id @default(cuid())
+  email     String  @unique
+  name      String?
+  photoUrl  String?
+
+  /// Google's stable subject id. Emails can change hands; this does not.
+  googleSub String? @unique
+
+  /// Set once phone sign-in ships. Unverified numbers are never trusted for linking,
+  /// because a typed number would let anyone read another owner's contact details.
+  phone           String?
+  phoneVerifiedAt DateTime?
+
+  /// The CRM owner record this account speaks for. Null until a match is found —
+  /// the account still works, it simply has no properties to show yet.
+  ownerId String? @unique
+  owner   Owner?  @relation(fields: [ownerId], references: [id], onDelete: SetNull)
+
+  lastAuthMethod OwnerAuthMethod?
+  lastLoginAt    DateTime?
+
+  /// Incremented to invalidate every existing session for this account at once.
+  sessionEpoch Int     @default(0)
+  isActive     Boolean @default(true)
+
+  requests  OwnerStatusRequest[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([ownerId])
+}
+
+/**
+ * An owner telling us a property is sold or rented.
+ *
+ * Deliberately a request rather than an action. The owner never changes what is
+ * live: this raises a notification, someone confirms it with them by phone, and a
+ * staff member sets the listing status in the CRM. That keeps a listing HN has
+ * written and priced under HN's control, and leaves a record of who asked and when.
+ */
+model OwnerStatusRequest {
+  id        String       @id @default(cuid())
+  accountId String
+  account   OwnerAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
+
+  propertyId String
+  property   Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+
+  /// SOLD or RENTED — what the owner says has happened.
+  requested ListingStatus
+  note      String?       @db.Text
+
+  state        OwnerRequestState @default(PENDING)
+  resolvedById String?
+  resolvedAt   DateTime?
+
+  createdAt DateTime @default(now())
+
+  @@index([state, createdAt])
+  @@index([propertyId])
 }

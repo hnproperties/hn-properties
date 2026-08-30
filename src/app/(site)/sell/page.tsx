@@ -78,7 +78,7 @@ export default async function SellPage() {
             { name: 'name', label: 'Your name', required: true, half: true, section: 'Your details — only name and mobile are required' },
             { name: 'phone', label: 'Mobile', type: 'tel', required: true, half: true },
             { name: 'whatsapp', label: 'WhatsApp (optional)', half: true },
-            { name: 'email', label: 'Email (optional)', type: 'email', half: true },
+            { name: 'email', label: 'Email', type: 'email', half: true, required: true, hint: 'So you can sign in and manage this listing later' },
             { name: 'preferredTime', label: 'Best time to call', placeholder: 'e.g. weekday evenings', half: true },
 
             { name: 'categorySlug', label: 'Property type', type: 'select', options: OWNER_PROPERTY_TYPES, required: true, half: true, section: 'The property' },

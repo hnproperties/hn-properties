@@ -403,6 +403,16 @@ export const siteVisitRequestSchema = z.object({
 
 export const ownerSubmissionSchema = z.object({
   ...publicContact,
+  /*
+   * Required here, unlike on the enquiry form.
+   *
+   * An email is how an owner gets back into their own listing: sign-in matches the
+   * verified address from Google against this one. Without it their properties
+   * exist but they have no way to reach them. The enquiry form keeps it optional —
+   * that is a "call me back" form, and asking for an email there would cost leads
+   * for no benefit, since nothing is created for the person to come back to.
+   */
+  email: z.string().trim().email('Please enter a valid email so you can sign in later'),
   intent: z.enum(['SELL', 'RENT_OUT']),
   categorySlug: str(80).optional(),
   locality: str(160).optional(),
