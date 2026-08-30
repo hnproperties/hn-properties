@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { currentOwner } from '@/lib/owner-session';
 import ProfileForm from '@/components/account/ProfileForm';
+import SignOutButton from '@/components/account/SignOutButton';
 
 export const metadata: Metadata = {
   title: 'Your profile',
@@ -32,6 +33,17 @@ export default async function ProfilePage() {
         phone={account.phone}
         photoUrl={account.photoUrl}
       />
+
+      {/*
+        Outside the form card, and last. Inside it, sitting next to Save changes,
+        it would be one mis-tap away from throwing away edits someone had just made.
+      */}
+      <div className="mt-6">
+        <SignOutButton />
+        <p className="mt-2 text-center text-xs text-[var(--muted)]">
+          You can sign back in with Google at any time.
+        </p>
+      </div>
     </div>
   );
 }

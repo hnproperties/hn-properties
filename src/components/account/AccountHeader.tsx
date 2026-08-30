@@ -1,17 +1,9 @@
 'use client';
 
-import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { useState } from 'react';
+import SignOutButton from './SignOutButton';
 
-/**
- * The signed-in strip at the top of the owner area: who you are, and the way out.
- *
- * Sign-out clears the cookie server-side rather than in the browser, because the
- * cookie is httpOnly — script cannot touch it, which is the point of it being
- * httpOnly. `router.refresh()` afterwards throws away the cached server render so
- * the page cannot briefly show the previous session's content.
- */
+/** The signed-in strip at the top of the owner area: who you are, and the way out. */
 export default function AccountHeader({
   name,
   email,
@@ -21,16 +13,6 @@ export default function AccountHeader({
   email: string;
   photoUrl: string | null;
 }) {
-  const router = useRouter();
-  const [busy, setBusy] = useState(false);
-
-  async function signOut() {
-    setBusy(true);
-    await fetch('/api/auth/owner-logout', { method: 'POST' });
-    router.push('/');
-    router.refresh();
-  }
-
   const initial = (name ?? email).trim().charAt(0).toUpperCase();
 
   return (
@@ -55,9 +37,8 @@ export default function AccountHeader({
         <Link href="/account/profile" className="btn btn-ghost py-2 text-sm">
           Profile
         </Link>
-        <button type="button" className="btn btn-ghost py-2 text-sm" disabled={busy} onClick={signOut}>
-          {busy ? 'Signing out…' : 'Sign out'}
-        </button>
+        {/* One implementation, so the two never drift apart on what signing out does. */}
+        <SignOutButton className="w-auto py-2 text-sm" />
       </div>
     </div>
   );
