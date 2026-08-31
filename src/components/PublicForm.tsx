@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { compressImage } from '@/lib/compress-image';
 import Combobox from './Combobox';
 import LocationPicker from './LocationPicker';
@@ -185,6 +185,27 @@ export default function PublicForm({ endpoint, fields, hidden, submitLabel, succ
   const [reviewing, setReviewing] = useState(false);
   const reviewRef = useRef<HTMLDivElement>(null);
   const [step, setStep] = useState(0);
+
+  /*
+   * Whether we are actually on a phone, in JavaScript rather than CSS.
+   *
+   * Stepping cannot be done by hiding sections with CSS. A `required` field inside
+   * a display:none section still blocks the form, but the browser cannot focus it
+   * to report the error — so pressing Next did nothing at all, silently, which is
+   * exactly the bug this replaces. Unmounting the other sections is the fix, and
+   * that needs a real breakpoint check.
+   *
+   * Starts false so the server and the first client render agree; the effect
+   * corrects it immediately after mount.
+   */
+  const [narrow, setNarrow] = useState(false);
+  useEffect(() => {
+    const query = window.matchMedia('(max-width: 639px)');
+    const sync = () => setNarrow(query.matches);
+    sync();
+    query.addEventListener('change', sync);
+    return () => query.removeEventListener('change', sync);
+  }, []);
   // Money fields are entered as an amount plus a unit; the form submits plain rupees.
   const [money, setMoney] = useState<Record<string, { amount: string; unit: string }>>({});
 
@@ -214,7 +235,7 @@ export default function PublicForm({ endpoint, fields, hidden, submitLabel, succ
      * browser's validation, so an incomplete step stops here with its own error
      * rather than moving on and failing later.
      */
-    if (stepOnMobile && !reviewing && !onLastStep) {
+    if (stepping && !onLastStep) {
       setStep(current + 1);
       window.scrollTo({ top: 0, behavior: 'smooth' });
       return;
@@ -301,15 +322,17 @@ export default function PublicForm({ endpoint, fields, hidden, submitLabel, succ
     .filter((group) => group.items.length > 0);
 
   /*
-   * Stepping is a phone-only presentation, so it never changes what gets sent —
-   * every field stays mounted, and the sections not on this step are hidden with
-   * CSS. Unmounting them would drop their values and break the browser's own
-   * required-field validation, which cannot report an error on a field that is not
-   * in the document.
+   * Sections not on the current step are removed from the page, not hidden.
+   *
+   * Nothing is lost by doing so: every field is controlled, and the payload is
+   * built from `values` in state rather than from the DOM. Hiding them instead
+   * leaves their required fields in the document, where they block submission
+   * without being focusable — the browser refuses and reports nothing.
    */
-  const steps = stepOnMobile ? visibleGroups.length : 0;
+  const stepping = !!stepOnMobile && narrow && !reviewing;
+  const steps = stepping ? visibleGroups.length : 0;
   const current = Math.min(step, Math.max(0, steps - 1));
-  const onLastStep = !stepOnMobile || current >= steps - 1;
+  const onLastStep = !stepping || current >= steps - 1;
 
   function renderField(field: Field) {
     const value = values[field.name] ?? '';
@@ -451,8 +474,8 @@ export default function PublicForm({ endpoint, fields, hidden, submitLabel, succ
   return (
     <form onSubmit={submit} className="glass-card relative p-6 sm:p-8">
       <div className="space-y-8">
-        {stepOnMobile && steps > 1 && !reviewing && (
-          <div className="sm:hidden">
+        {stepping && steps > 1 && (
+          <div>
             <div className="flex items-center justify-between text-sm">
               <span className="font-semibold text-[var(--brand)]">
                 Step {current + 1} of {steps}
@@ -472,11 +495,8 @@ export default function PublicForm({ endpoint, fields, hidden, submitLabel, succ
         )}
 
         {visibleGroups.map((group, index) => (
-          <section
-            key={group.title ?? index}
-            // Hidden, not unmounted — see the note above `steps`.
-            className={stepOnMobile && !reviewing && index !== current ? 'hidden sm:block' : undefined}
-          >
+          stepping && index !== current ? null : (
+          <section key={group.title ?? index}>
             {group.title && (
               <h3 className="eyebrow mb-4 border-b pb-3 text-base text-[var(--brand)] sm:text-sm">{group.title}</h3>
             )}
@@ -484,6 +504,7 @@ export default function PublicForm({ endpoint, fields, hidden, submitLabel, succ
               {group.items.map(renderField)}
             </div>
           </section>
+          )
         ))}
       </div>
 
@@ -580,10 +601,10 @@ export default function PublicForm({ endpoint, fields, hidden, submitLabel, succ
           someone move on — a step that silently allowed empty required fields would
           only fail at the end, with no clue which section was at fault.
         */}
-        {stepOnMobile && !reviewing && current > 0 && (
+        {stepping && current > 0 && (
           <button
             type="button"
-            className="btn btn-ghost px-6 sm:hidden"
+            className="btn btn-ghost px-6"
             onClick={() => {
               setStep(current - 1);
               window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -593,17 +614,15 @@ export default function PublicForm({ endpoint, fields, hidden, submitLabel, succ
           </button>
         )}
 
-        {stepOnMobile && !reviewing && !onLastStep && (
-          <button type="submit" className="btn btn-primary flex-1 px-8 sm:hidden">
+        {stepping && !onLastStep && (
+          <button type="submit" className="btn btn-primary flex-1 px-8">
             Next
           </button>
         )}
 
         <button
           type="submit"
-          className={`btn btn-primary px-8 ${
-            stepOnMobile && !reviewing && !onLastStep ? 'hidden sm:inline-flex' : ''
-          }`}
+          className={`btn btn-primary px-8 ${stepping && !onLastStep ? 'hidden' : ''}`}
           disabled={state === 'sending'}
         >
           {state === 'sending' ? 'Sending…' : reviewing ? 'Confirm and send' : reviewBeforeSend ? 'Review your details' : submitLabel}
