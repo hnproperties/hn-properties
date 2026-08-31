@@ -43,17 +43,17 @@ export default async function HomePage() {
     <>
       {/* Hero */}
       <section className="hero-band relative z-0">
-        <div className="wrap grid content-center gap-8 py-10 lg:grid-cols-[1.2fr_0.8fr] lg:py-12 lg:pb-24">
+        <div className="wrap grid content-center gap-5 py-6 lg:gap-8 lg:py-12 lg:grid-cols-[1.2fr_0.8fr] lg:pb-24">
           <div className="animate-rise">
             <h1 className="display text-shadow-hero text-4xl leading-[1.1] sm:text-5xl">
               Find the Right<br />Property in <span className="text-[var(--accent)]">{site.city}</span>
             </h1>
-            <p className="text-shadow-hero mt-4 text-xl font-semibold text-white">Buy • Rent • Sell • Give on Rent</p>
-            <p className="text-shadow-hero mt-2 text-lg text-white/85">Your trusted property consultant — {site.name}</p>
+            <p className="text-shadow-hero mt-3 text-xl font-semibold text-white lg:mt-4">Buy • Rent • Sell • Give on Rent</p>
+            <p className="text-shadow-hero mt-1.5 text-lg text-white/85 lg:mt-2">Your trusted property consultant — {site.name}</p>
 
             {/* Icon centred above the label on phones so all three boxes match in
                 height and the text sits evenly; the inline pills return at lg. */}
-            <div className="mt-6 grid grid-cols-3 items-stretch gap-2 lg:flex lg:flex-wrap">
+            <div className="mt-4 grid grid-cols-3 items-stretch gap-2 lg:mt-6 lg:flex lg:flex-wrap">
               {[
                 { icon: '✓', label: 'Verified Properties' },
                 { icon: '📍', label: `Local ${site.city} Expertise` },
@@ -61,7 +61,7 @@ export default async function HomePage() {
               ].map((chip) => (
                 <span
                   key={chip.label}
-                  className="flex flex-col items-center justify-start gap-1.5 rounded-xl border border-white/40 bg-black/25 px-2 py-3 text-center text-[12px] leading-tight text-white transition duration-300 hover:-translate-y-0.5 hover:bg-black/35 lg:flex-row lg:gap-2 lg:rounded-full lg:px-4 lg:py-2 lg:text-base"
+                  className="flex flex-col items-center justify-start gap-1 rounded-xl border border-white/40 bg-black/25 px-2 py-2 text-center text-[12px] leading-tight text-white transition duration-300 hover:-translate-y-0.5 hover:bg-black/35 lg:flex-row lg:gap-2 lg:rounded-full lg:px-4 lg:py-2 lg:text-base"
                 >
                   <span className="text-base leading-none lg:text-inherit">{chip.icon}</span>
                   <span className="text-balance">{chip.label}</span>
@@ -97,17 +97,17 @@ export default async function HomePage() {
             </a>
             <p className="mt-1 text-xs text-white/60">Your trusted property consultant</p>
 
-            <div className="mt-4 space-y-2">
+            <div className="mt-4 space-y-2.5 lg:space-y-2">
               {ACTIONS.map((item) => (
                 <Link
                   key={item.href}
                   href={item.href}
-                  className="flex items-center gap-3 rounded-lg bg-white px-4 py-2.5 transition duration-300 hover:-translate-y-0.5 hover:shadow-lg"
+                  className="flex items-center gap-3.5 rounded-lg bg-white px-4 py-3.5 transition duration-300 hover:-translate-y-0.5 hover:shadow-lg lg:gap-3 lg:py-2.5"
                 >
-                  <span className="text-lg">{item.icon}</span>
+                  <span className="text-2xl lg:text-lg">{item.icon}</span>
                   <span className="min-w-0">
-                    <span className="block text-base font-semibold text-[var(--navy)]">{item.title}</span>
-                    <span className="block text-sm text-[var(--muted)]">{item.body}</span>
+                    <span className="block text-[17px] font-semibold text-[var(--navy)] lg:text-base">{item.title}</span>
+                    <span className="block text-[14.5px] text-[var(--muted)] lg:text-sm">{item.body}</span>
                   </span>
                 </Link>
               ))}
