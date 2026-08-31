@@ -86,6 +86,7 @@ export default async function SellPage() {
 
       <div>
         <PublicForm
+          reviewBeforeSend
           endpoint="/api/public/submissions"
           hidden={{ intent: 'SELL' }}
           submitLabel="Submit property details"

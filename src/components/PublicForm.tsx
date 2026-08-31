@@ -38,6 +38,15 @@ type Field = {
 
 type Props = {
   endpoint: string;
+  /**
+   * Show a read-back of the answers before sending.
+   *
+   * Only worth it where a mistake is expensive and hard to undo — a property that
+   * goes live under the wrong category has to be corrected by phone afterwards.
+   * A quick enquiry does not need it, and a confirmation step on a two-field form
+   * is friction with nothing to catch.
+   */
+  reviewBeforeSend?: boolean;
   fields: Field[];
   hidden?: Record<string, string | undefined>;
   submitLabel: string;
@@ -158,12 +167,13 @@ function PhotoField({ urls, onChange }: { urls: string[]; onChange: (next: strin
  * One form component behind every public submission: enquiry, site visit, owner
  * submission, requirement, contact. Includes the honeypot the API expects.
  */
-export default function PublicForm({ endpoint, fields, hidden, submitLabel, successTitle, successBody }: Props) {
+export default function PublicForm({ endpoint, fields, hidden, submitLabel, successTitle, successBody, reviewBeforeSend }: Props) {
   const [values, setValues] = useState<Record<string, any>>({});
   const [state, setState] = useState<'idle' | 'sending' | 'done'>('idle');
   const [error, setError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string[]>>({});
   const [reference, setReference] = useState<string | null>(null);
+  const [reviewing, setReviewing] = useState(false);
   // Money fields are entered as an amount plus a unit; the form submits plain rupees.
   const [money, setMoney] = useState<Record<string, { amount: string; unit: string }>>({});
 
@@ -180,6 +190,20 @@ export default function PublicForm({ endpoint, fields, hidden, submitLabel, succ
 
   async function submit(event: React.FormEvent) {
     event.preventDefault();
+
+    /*
+     * First press opens the review, second one sends.
+     *
+     * Deliberately after the browser's own validation, which has already run by the
+     * time submit fires — so the summary never shows a half-filled form, and the
+     * required-field messages still appear where the fields are.
+     */
+    if (reviewBeforeSend && !reviewing) {
+      setReviewing(true);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      return;
+    }
+
     setState('sending');
     setError(null);
     setFieldErrors({});
@@ -208,6 +232,7 @@ export default function PublicForm({ endpoint, fields, hidden, submitLabel, succ
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Something went wrong');
       setState('idle');
+      setReviewing(false);
     }
   }
 
@@ -414,9 +439,69 @@ export default function PublicForm({ endpoint, fields, hidden, submitLabel, succ
         </div>
       )}
 
+      {reviewing && (
+        <div className="mt-8 rounded-2xl border-2 border-[var(--brand)] bg-[var(--brand-soft)] p-5 sm:p-6">
+          <h3 className="display text-lg text-[var(--navy)]">Please check before sending</h3>
+          <p className="mt-1 text-sm text-[var(--muted)]">
+            This is what we will list. A wrong property type has to be corrected by phone once it is live,
+            so it is worth a quick look.
+          </p>
+
+          <dl className="mt-4 divide-y divide-black/5 rounded-xl bg-white/70">
+            {fields
+              .filter((field) => {
+                if (field.name === 'website') return false; // honeypot
+                const value = values[field.name];
+                if (value === undefined || value === null || value === '') return false;
+                if (Array.isArray(value) && !value.length) return false;
+                return visibleGroups.some((group) => group.items.some((item) => item.name === field.name));
+              })
+              .map((field) => {
+                const raw = values[field.name];
+
+                /*
+                 * Show what they picked, not what gets posted. A category reads as
+                 * an id in the payload, and "cmf3x9…" tells nobody they chose Flat
+                 * when they meant House — which is the entire mistake this is here
+                 * to catch.
+                 */
+                let shown: string;
+                if (Array.isArray(raw)) {
+                  shown = field.type === 'photos' ? `${raw.length} photo${raw.length === 1 ? '' : 's'}` : raw.join(', ');
+                } else if (field.type === 'checkbox') {
+                  shown = raw ? 'Yes' : 'No';
+                } else if (field.options?.length) {
+                  shown = field.options.find((option) => option.value === String(raw))?.label ?? String(raw);
+                } else if (field.type === 'money') {
+                  shown = `₹${Number(raw).toLocaleString('en-IN')}`;
+                } else {
+                  shown = String(raw);
+                }
+
+                return (
+                  <div key={field.name} className="flex gap-4 px-4 py-2.5 text-sm">
+                    <dt className="w-2/5 flex-none text-[var(--muted)]">{field.label}</dt>
+                    <dd className="min-w-0 flex-1 font-medium">{shown}</dd>
+                  </div>
+                );
+              })}
+          </dl>
+        </div>
+      )}
+
       <div className="mt-8 flex flex-wrap items-center gap-4 border-t pt-6">
+        {reviewing && (
+          <button
+            type="button"
+            className="btn btn-ghost px-6"
+            disabled={state === 'sending'}
+            onClick={() => setReviewing(false)}
+          >
+            Go back and edit
+          </button>
+        )}
         <button type="submit" className="btn btn-primary px-8" disabled={state === 'sending'}>
-          {state === 'sending' ? 'Sending…' : submitLabel}
+          {state === 'sending' ? 'Sending…' : reviewing ? 'Confirm and send' : reviewBeforeSend ? 'Review your details' : submitLabel}
         </button>
         <p className="text-sm text-[var(--muted)]">
           Only the fields marked <span className="text-[var(--danger)]">*</span> are required. We use your details

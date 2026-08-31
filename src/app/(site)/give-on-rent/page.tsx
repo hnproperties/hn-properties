@@ -78,6 +78,7 @@ export default async function GiveOnRentPage() {
 
       <div>
         <PublicForm
+          reviewBeforeSend
           endpoint="/api/public/submissions"
           hidden={{ intent: 'RENT_OUT' }}
           submitLabel="Submit property details"
