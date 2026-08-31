@@ -343,7 +343,10 @@ export default function PublicForm({ endpoint, fields, hidden, submitLabel, succ
     return (
       <div key={field.name} className={field.half ? '' : 'sm:col-span-2'}>
         {field.type !== 'location' && (
-          <label className="label" htmlFor={`f-${field.name}`}>
+          // Bumped on a phone only, and scoped here rather than in the .label
+          // class — that class is shared with 41 places in the CRM, where the
+          // labels sit in dense tables and forms that do not want the extra size.
+          <label className="label text-[15px] sm:text-sm" htmlFor={`f-${field.name}`}>
             {field.label}
             {field.required && <span className="text-[var(--danger)]"> *</span>}
           </label>
@@ -375,7 +378,7 @@ export default function PublicForm({ endpoint, fields, hidden, submitLabel, succ
               checked={!!values[field.name]}
               onChange={(e) => set_(e.target.checked)}
             />
-            <span className="text-[var(--ink-soft)]">{field.hint ?? 'Yes'}</span>
+            <span className="text-[15px] text-[var(--ink-soft)] sm:text-sm">{field.hint ?? 'Yes'}</span>
           </label>
         ) : field.type === 'money' ? (
           (() => {
