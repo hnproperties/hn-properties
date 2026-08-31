@@ -47,6 +47,15 @@ type Props = {
    * is friction with nothing to catch.
    */
   reviewBeforeSend?: boolean;
+  /**
+   * Show one section at a time on a phone.
+   *
+   * A listing form is five or six sections long, which on a phone is a very long
+   * scroll with no sense of progress — people give up in the middle without knowing
+   * how much was left. Desktop keeps the single page, where the whole form is
+   * visible at once and stepping through it would only add clicks.
+   */
+  stepOnMobile?: boolean;
   fields: Field[];
   hidden?: Record<string, string | undefined>;
   submitLabel: string;
@@ -167,7 +176,7 @@ function PhotoField({ urls, onChange }: { urls: string[]; onChange: (next: strin
  * One form component behind every public submission: enquiry, site visit, owner
  * submission, requirement, contact. Includes the honeypot the API expects.
  */
-export default function PublicForm({ endpoint, fields, hidden, submitLabel, successTitle, successBody, reviewBeforeSend }: Props) {
+export default function PublicForm({ endpoint, fields, hidden, submitLabel, successTitle, successBody, reviewBeforeSend, stepOnMobile }: Props) {
   const [values, setValues] = useState<Record<string, any>>({});
   const [state, setState] = useState<'idle' | 'sending' | 'done'>('idle');
   const [error, setError] = useState<string | null>(null);
@@ -175,6 +184,7 @@ export default function PublicForm({ endpoint, fields, hidden, submitLabel, succ
   const [reference, setReference] = useState<string | null>(null);
   const [reviewing, setReviewing] = useState(false);
   const reviewRef = useRef<HTMLDivElement>(null);
+  const [step, setStep] = useState(0);
   // Money fields are entered as an amount plus a unit; the form submits plain rupees.
   const [money, setMoney] = useState<Record<string, { amount: string; unit: string }>>({});
 
@@ -199,6 +209,17 @@ export default function PublicForm({ endpoint, fields, hidden, submitLabel, succ
      * time submit fires — so the summary never shows a half-filled form, and the
      * required-field messages still appear where the fields are.
      */
+    /*
+     * On a phone, submit means "next" until the last section. Runs after the
+     * browser's validation, so an incomplete step stops here with its own error
+     * rather than moving on and failing later.
+     */
+    if (stepOnMobile && !reviewing && !onLastStep) {
+      setStep(current + 1);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      return;
+    }
+
     if (reviewBeforeSend && !reviewing) {
       setReviewing(true);
       /*
@@ -278,6 +299,17 @@ export default function PublicForm({ endpoint, fields, hidden, submitLabel, succ
   const visibleGroups = groups
     .map((group) => ({ ...group, items: group.items.filter(isVisible) }))
     .filter((group) => group.items.length > 0);
+
+  /*
+   * Stepping is a phone-only presentation, so it never changes what gets sent —
+   * every field stays mounted, and the sections not on this step are hidden with
+   * CSS. Unmounting them would drop their values and break the browser's own
+   * required-field validation, which cannot report an error on a field that is not
+   * in the document.
+   */
+  const steps = stepOnMobile ? visibleGroups.length : 0;
+  const current = Math.min(step, Math.max(0, steps - 1));
+  const onLastStep = !stepOnMobile || current >= steps - 1;
 
   function renderField(field: Field) {
     const value = values[field.name] ?? '';
@@ -419,10 +451,34 @@ export default function PublicForm({ endpoint, fields, hidden, submitLabel, succ
   return (
     <form onSubmit={submit} className="glass-card relative p-6 sm:p-8">
       <div className="space-y-8">
+        {stepOnMobile && steps > 1 && !reviewing && (
+          <div className="sm:hidden">
+            <div className="flex items-center justify-between text-sm">
+              <span className="font-semibold text-[var(--brand)]">
+                Step {current + 1} of {steps}
+              </span>
+              <span className="text-[var(--muted)]">{visibleGroups[current]?.title}</span>
+            </div>
+            {/* A bar rather than dots: six dots on a narrow screen are too small to
+                read as progress, and this also works when a property type adds or
+                removes a section. */}
+            <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-black/10">
+              <div
+                className="h-full rounded-full bg-[var(--brand)] transition-all duration-300"
+                style={{ width: `${((current + 1) / steps) * 100}%` }}
+              />
+            </div>
+          </div>
+        )}
+
         {visibleGroups.map((group, index) => (
-          <section key={group.title ?? index}>
+          <section
+            key={group.title ?? index}
+            // Hidden, not unmounted — see the note above `steps`.
+            className={stepOnMobile && !reviewing && index !== current ? 'hidden sm:block' : undefined}
+          >
             {group.title && (
-              <h3 className="eyebrow mb-4 border-b pb-3 text-[var(--brand)]">{group.title}</h3>
+              <h3 className="eyebrow mb-4 border-b pb-3 text-base text-[var(--brand)] sm:text-sm">{group.title}</h3>
             )}
             <div className="grid items-start gap-x-6 gap-y-5 sm:grid-cols-2">
               {group.items.map(renderField)}
@@ -505,7 +561,7 @@ export default function PublicForm({ endpoint, fields, hidden, submitLabel, succ
         </div>
       )}
 
-      <div className="mt-8 flex flex-wrap items-center gap-4 border-t pt-6">
+      <div className="mt-8 flex flex-wrap items-center gap-3 border-t pt-6">
         {reviewing && (
           <button
             type="button"
@@ -516,7 +572,40 @@ export default function PublicForm({ endpoint, fields, hidden, submitLabel, succ
             Go back and edit
           </button>
         )}
-        <button type="submit" className="btn btn-primary px-8" disabled={state === 'sending'}>
+
+        {/*
+          Back and Next only exist on a phone, and only while stepping. Back is a
+          plain button so it never submits; Next is type="submit" on purpose, which
+          is what makes the browser run its own required-field checks before letting
+          someone move on — a step that silently allowed empty required fields would
+          only fail at the end, with no clue which section was at fault.
+        */}
+        {stepOnMobile && !reviewing && current > 0 && (
+          <button
+            type="button"
+            className="btn btn-ghost px-6 sm:hidden"
+            onClick={() => {
+              setStep(current - 1);
+              window.scrollTo({ top: 0, behavior: 'smooth' });
+            }}
+          >
+            Back
+          </button>
+        )}
+
+        {stepOnMobile && !reviewing && !onLastStep && (
+          <button type="submit" className="btn btn-primary flex-1 px-8 sm:hidden">
+            Next
+          </button>
+        )}
+
+        <button
+          type="submit"
+          className={`btn btn-primary px-8 ${
+            stepOnMobile && !reviewing && !onLastStep ? 'hidden sm:inline-flex' : ''
+          }`}
+          disabled={state === 'sending'}
+        >
           {state === 'sending' ? 'Sending…' : reviewing ? 'Confirm and send' : reviewBeforeSend ? 'Review your details' : submitLabel}
         </button>
         <p className="text-sm text-[var(--muted)]">

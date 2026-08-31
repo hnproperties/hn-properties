@@ -65,7 +65,10 @@ export default async function GiveOnRentPage() {
           lock-in and escalation terms.
         </p>
 
-        <ul className="mt-6 space-y-2.5 text-sm lg:mt-8 lg:space-y-4">
+        {/* Hidden on a phone for the same reason as the sell page: it sits between
+            the heading and the first field, and the stepped form now carries its
+            own sense of progress. */}
+        <ul className="mt-6 hidden space-y-2.5 text-sm lg:mt-8 lg:block lg:space-y-4">
           {SHORT_POINTS.map((point, index) => (
             <li key={point} className="flex gap-3">
               <span className="text-[var(--brass)]">—</span>
@@ -79,6 +82,7 @@ export default async function GiveOnRentPage() {
       <div>
         <PublicForm
           reviewBeforeSend
+          stepOnMobile
           endpoint="/api/public/submissions"
           hidden={{ intent: 'RENT_OUT' }}
           submitLabel="Submit property details"
@@ -95,8 +99,8 @@ export default async function GiveOnRentPage() {
             { name: 'locality', label: 'Locality', type: 'combobox', options: locations, placeholder: 'Type or pick — e.g. Napier Town', half: true, hint: 'Start typing to search. Not listed? Type it in anyway and we will add it.' },
             { name: 'landmark', label: 'Nearby landmark', half: true },
             { name: 'facing', label: 'Facing', type: 'select', options: FACING_OPTIONS, half: true },
-            { name: 'addressLine', label: 'Full address (optional)', placeholder: 'House / plot number, street, colony', hint: 'Never shown on the website — it only helps our team find the property' },
-            { name: 'mapLink', label: 'Property location (optional)', type: 'location' },
+            { name: 'addressLine', label: 'Full address (optional)', placeholder: 'House / plot number, street, colony', section: 'Property location (optional)', hint: 'Never shown on the website — it only helps our team find the property' },
+            { name: 'mapLink', label: 'Pin on the map (optional)', type: 'location' },
 
             { name: 'areaUnit', label: 'Area unit', type: 'select', options: AREA_UNIT_OPTIONS, half: true, section: 'Measurements', hint: 'Applies to all the figures below' },
             { name: 'areaSize', label: 'Plot area', type: 'number', half: true, visibleFor: FIELD_TYPES.plotArea },

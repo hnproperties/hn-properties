@@ -65,7 +65,13 @@ export default async function SellPage() {
           have already been qualified.
         </p>
 
-        <ol className="mt-6 space-y-3 lg:mt-8 lg:space-y-5">
+        {/*
+          Hidden on a phone. The form is now stepped, and its own progress bar says
+          where you are — a second list of steps above it was answering a question
+          the form already answers, while pushing the first field below the fold.
+          The laptop keeps it, where there is room beside the form.
+        */}
+        <ol className="mt-6 hidden space-y-3 lg:mt-8 lg:block lg:space-y-5">
           {(SHORT_STEPS as [string, string][]).map(([title, body], index) => (
             <li key={title} className="flex gap-4">
               <span className="mono mt-0.5 text-sm text-[var(--brass)]">{String(index + 1).padStart(2, '0')}</span>
@@ -79,7 +85,7 @@ export default async function SellPage() {
           ))}
         </ol>
 
-        <p className="mt-8 text-xs text-[var(--muted)]">
+        <p className="mt-4 text-xs text-[var(--muted)] lg:mt-8">
           Your contact details stay with us. We never publish an owner&apos;s name or number on the website.
         </p>
       </div>
@@ -87,6 +93,7 @@ export default async function SellPage() {
       <div>
         <PublicForm
           reviewBeforeSend
+          stepOnMobile
           endpoint="/api/public/submissions"
           hidden={{ intent: 'SELL' }}
           submitLabel="Submit property details"
@@ -103,8 +110,8 @@ export default async function SellPage() {
             { name: 'locality', label: 'Locality', type: 'combobox', options: locations, placeholder: 'Type or pick — e.g. Napier Town', half: true, hint: 'Start typing to search. Not listed? Type it in anyway and we will add it.' },
             { name: 'landmark', label: 'Nearby landmark', half: true },
             { name: 'facing', label: 'Facing', type: 'select', options: FACING_OPTIONS, half: true },
-            { name: 'addressLine', label: 'Full address (optional)', placeholder: 'House / plot number, street, colony', hint: 'Never shown on the website — it only helps our team find the property' },
-            { name: 'mapLink', label: 'Property location (optional)', type: 'location' },
+            { name: 'addressLine', label: 'Full address (optional)', placeholder: 'House / plot number, street, colony', section: 'Property location (optional)', hint: 'Never shown on the website — it only helps our team find the property' },
+            { name: 'mapLink', label: 'Pin on the map (optional)', type: 'location' },
 
             { name: 'areaUnit', label: 'Area unit', type: 'select', options: AREA_UNIT_OPTIONS, half: true, section: 'Measurements', hint: 'Applies to all the figures below' },
             { name: 'areaSize', label: 'Plot area', type: 'number', half: true, visibleFor: FIELD_TYPES.plotArea },
