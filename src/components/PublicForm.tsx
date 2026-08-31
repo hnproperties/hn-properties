@@ -360,6 +360,11 @@ export default function PublicForm({ endpoint, fields, hidden, submitLabel, succ
             placeholder={field.placeholder}
             className={inputClass}
             required={field.required}
+            // Jabalpur has more localities than we have on file, and an owner in one
+            // we do not know about should not be stuck. The locality itself is
+            // created on submission and stays hidden until HN approves it.
+            allowNew
+            newLabel={(typed) => `Add "${typed}" as a new locality`}
           />
         ) : field.type === 'select' ? (
           <select
