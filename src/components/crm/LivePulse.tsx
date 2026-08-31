@@ -77,6 +77,24 @@ export default function LivePulse({ onCounts }: { onCounts?: (counts: Counts) =>
             tone: 'alert',
           });
         }
+        /*
+         * An owner reporting a property sold or rented out.
+         *
+         * Uses the 'submission' sound rather than 'lead' — it is the one meant to
+         * be noticed, and this carries the same weight as a new listing arriving:
+         * a live listing stays on the website until someone rings the owner back,
+         * so a missed one is a property advertised that is no longer for sale.
+         */
+        if (announce && data.ownerRequests > before.ownerRequests) {
+          const many = data.ownerRequests - before.ownerRequests > 1;
+          push({
+            text: many
+              ? `${data.ownerRequests} owners have reported a property sold or rented`
+              : 'An owner has reported their property sold or rented out',
+            href: '/crm/owner-requests',
+            tone: 'alert',
+          });
+        }
         if (announce && data.newLeads > before.newLeads) {
           push({ text: 'A new lead has come in', href: '/crm/leads', tone: 'alert' }, 'lead');
         }
@@ -89,7 +107,8 @@ export default function LivePulse({ onCounts }: { onCounts?: (counts: Counts) =>
           before.newLeads !== data.newLeads ||
           before.dueFollowUps !== data.dueFollowUps ||
           before.overdueFollowUps !== data.overdueFollowUps ||
-          before.visitsToday !== data.visitsToday;
+          before.visitsToday !== data.visitsToday ||
+          before.ownerRequests !== data.ownerRequests;
 
         if (changed) router.refresh();
       } catch {

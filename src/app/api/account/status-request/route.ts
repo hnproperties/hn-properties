@@ -2,6 +2,7 @@ import type { NextRequest } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { currentOwner } from '@/lib/owner-session';
 import { notify, activity } from '@/lib/audit';
+import { emitChange } from '@/lib/events';
 
 export const dynamic = 'force-dynamic';
 
@@ -82,6 +83,16 @@ export async function POST(req: NextRequest) {
     propertyId: property.id,
     action: `Owner reported the property as ${wording} through their account`,
   });
+
+  /*
+   * Push it to any open CRM tab straight away.
+   *
+   * The pulse would pick this up within a few seconds regardless, but this is one
+   * of the few things where the delay matters: a listing stays live on the website
+   * until someone rings the owner, so an unnoticed report means advertising a
+   * property that is no longer for sale.
+   */
+  emitChange({ kind: 'changed', title: `${property.code} reported ${wording}` });
 
   return Response.json({ data: { ok: true } });
 }
