@@ -92,15 +92,25 @@ export default function FloatingContact() {
           aria-expanded={open}
           aria-label={open ? 'Close menu' : 'Sell or give your property on rent'}
           onClick={() => setOpen((value) => !value)}
-          className="flex h-14 w-14 items-center justify-center rounded-full bg-[var(--brand)] text-white shadow-xl transition hover:bg-[var(--brand-dark)] sm:hidden"
+          className="flex h-14 w-14 items-center justify-center rounded-full bg-[var(--accent)] text-[#3d2708] shadow-[0_10px_28px_-6px_rgba(245,165,36,0.75)] transition hover:bg-[#e0951c] sm:hidden"
         >
-          {/* Rotating the same glyph into a cross keeps one shape rather than swapping icons. */}
-          <span
+          {/*
+            Drawn rather than typed. A "+" character is sized and centred by whatever
+            font happens to load, so it never quite sits in the middle of the circle;
+            two lines are exactly the size asked for and rotate cleanly into a cross,
+            which keeps one shape instead of swapping icons on open.
+          */}
+          <svg
             aria-hidden="true"
-            className={`text-3xl font-light leading-none transition-transform duration-200 ${open ? 'rotate-45' : ''}`}
+            viewBox="0 0 24 24"
+            className={`h-8 w-8 transition-transform duration-200 ${open ? 'rotate-45' : ''}`}
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2.6"
+            strokeLinecap="round"
           >
-            +
-          </span>
+            <path d="M12 5v14M5 12h14" />
+          </svg>
         </button>
 
         <a
