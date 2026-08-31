@@ -97,7 +97,13 @@ export default async function HomePage() {
             </a>
             <p className="mt-1 text-xs text-white/60">Your trusted property consultant</p>
 
-            <div className="mt-4 space-y-2 lg:space-y-2">
+            {/*
+              Four gaps between five rows, so every step here costs four times what
+              it looks like. 8px to 12px spends about 16px of the margin left at the
+              bottom of the screen — enough to separate the rows, and short of the
+              24px that would start pushing the card off again.
+            */}
+            <div className="mt-4 space-y-3 lg:space-y-2">
               {ACTIONS.map((item) => (
                 <Link
                   key={item.href}
