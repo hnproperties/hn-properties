@@ -87,11 +87,11 @@ export default async function GiveOnRentPage() {
             { name: 'name', label: 'Your name', required: true, half: true, section: 'Your details — only name and mobile are required' },
             { name: 'phone', label: 'Mobile', type: 'tel', required: true, half: true },
             { name: 'whatsapp', label: 'WhatsApp (optional)', half: true },
-            { name: 'email', label: 'Email', type: 'email', half: true, required: true, hint: 'So you can sign in and manage this listing later' },
+            { name: 'email', label: 'Email (optional)', type: 'email', half: true },
             { name: 'preferredTime', label: 'Best time to call', placeholder: 'e.g. weekday evenings', half: true },
 
             { name: 'categorySlug', label: 'Property type', type: 'select', options: OWNER_PROPERTY_TYPES, required: true, half: true, section: 'The property' },
-            { name: 'locality', label: 'Locality', type: 'combobox', options: locations, placeholder: 'Type or pick — e.g. Napier Town', half: true, hint: 'Start typing and we will suggest localities' },
+            { name: 'locality', label: 'Locality', type: 'combobox', options: locations, placeholder: 'Type or pick — e.g. Napier Town', half: true, hint: 'Start typing to search. Not listed? Type it in anyway and we will add it.' },
             { name: 'landmark', label: 'Nearby landmark', half: true },
             { name: 'facing', label: 'Facing', type: 'select', options: FACING_OPTIONS, half: true },
             { name: 'addressLine', label: 'Full address (optional)', placeholder: 'House / plot number, street, colony', hint: 'Never shown on the website — it only helps our team find the property' },

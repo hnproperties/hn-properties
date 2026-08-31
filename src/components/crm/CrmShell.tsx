@@ -32,6 +32,7 @@ const NAV: { href: string; label: string; icon: string; needs?: string[]; group:
   { href: '/crm/site-visits', label: 'Site Visits', icon: '📅', group: 'Today', needs: ['visit.view', 'visit.view.all'] },
 
   { href: '/crm/review', label: 'Review Queue', icon: '📋', group: 'Inventory', needs: ['property.view', 'property.view.all'] },
+  { href: '/crm/owner-requests', label: 'Owner Requests', icon: '📣', group: 'Inventory', needs: ['property.edit'] },
   { href: '/crm/properties', label: 'Properties', icon: '🏘️', group: 'Inventory', needs: ['property.view', 'property.view.all'] },
   { href: '/crm/listings', label: 'Listings', icon: '🏷️', group: 'Inventory', needs: ['property.view', 'property.view.all'] },
   { href: '/crm/hot-deals', label: 'Hot Deals', icon: '🔥', group: 'Inventory', needs: ['property.view', 'property.view.all'] },

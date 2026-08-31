@@ -6,7 +6,7 @@ import { currentOwner } from '@/lib/owner-session';
 import { ok, route, readJson, parse, clientIp } from '@/lib/api';
 import { ownerSubmissionSchema } from '@/lib/validators';
 import { tooMany } from '@/lib/errors';
-import { nextCode, nextPropertyCode } from '@/lib/ids';
+import { nextCode, nextPropertyCode, slugify } from '@/lib/ids';
 import { hashIp, notify, activity } from '@/lib/audit';
 import { site } from '@/lib/constants';
 import { parseMapLink } from '@/lib/geo';
@@ -47,7 +47,54 @@ export const POST = route(async (req: NextRequest) => {
       })
     : null;
 
-  const locationId = input.cityId ?? matchedLocality?.id ?? fallbackLocation?.id;
+  /*
+   * A locality we do not have yet becomes one.
+   *
+   * The list covers the localities we know about, not every locality that exists —
+   * Jabalpur keeps growing, and an owner in a new colony would otherwise have their
+   * property filed under the city and never appear on a locality page. Typing a
+   * name we do not recognise now creates it.
+   *
+   * Created inactive on purpose. It attaches the property correctly straight away,
+   * but stays off the public locality list until someone at HN reviews it — which
+   * keeps typos, duplicates and "my house" out of the navigation while still not
+   * losing the submission.
+   */
+  let newLocality: { id: string } | null = null;
+  if (typedLocality && !matchedLocality && !input.cityId && typedLocality.length >= 3) {
+    const parent = fallbackLocation?.id;
+    newLocality = await prisma.location
+      .create({
+        data: {
+          name: typedLocality,
+          slug: `${slugify(typedLocality)}-${Date.now().toString(36).slice(-4)}`,
+          type: 'LOCALITY',
+          parentId: parent,
+          // Off the public list until reviewed.
+          isActive: false,
+        },
+        select: { id: true },
+      })
+      .catch(() => null);
+
+    if (newLocality) {
+      const reviewers = await prisma.user.findMany({
+        where: { isActive: true, role: { key: { in: ['SUPER_ADMIN', 'ADMIN', 'MANAGER'] } } },
+        select: { id: true },
+      });
+      await notify(
+        reviewers.map((reviewer: { id: string }) => reviewer.id),
+        {
+          kind: 'LOCALITY_NEW',
+          title: `New locality suggested: ${typedLocality}`,
+          body: 'Added by an owner submission and hidden until you approve it. Check the spelling, then activate it.',
+          href: '/crm/settings',
+        },
+      );
+    }
+  }
+
+  const locationId = input.cityId ?? matchedLocality?.id ?? newLocality?.id ?? fallbackLocation?.id;
   if (!categoryId || !locationId) {
     // Nothing to attach the submission to yet; keep the enquiry so the lead is not lost.
     await prisma.enquiry.create({
