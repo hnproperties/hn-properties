@@ -28,6 +28,7 @@ export const GET = route(async () => {
     visitsToday,
     latestSubmission,
     nextVisit,
+    ownerRequests,
   ] = await Promise.all([
     prisma.listing.count({ where: { status: { in: ['SUBMITTED', 'UNDER_VERIFICATION'] } } }),
     prisma.lead.count({ where: { ...leadScope, viewedAt: null } }),
@@ -53,6 +54,8 @@ export const GET = route(async () => {
       orderBy: { scheduledAt: 'asc' },
       select: { id: true, scheduledAt: true, listing: { select: { publicTitle: true } }, client: { select: { name: true } } },
     }),
+    // Owners reporting a property as sold or rented out, waiting on a phone call.
+    prisma.ownerStatusRequest.count({ where: { state: 'PENDING' } }),
   ]);
 
   return ok({
@@ -61,6 +64,7 @@ export const GET = route(async () => {
     dueFollowUps,
     overdueFollowUps,
     visitsToday,
+    ownerRequests,
     latest: latestSubmission ? { title: latestSubmission.publicTitle, at: latestSubmission.createdAt } : null,
     nextVisit: nextVisit
       ? {

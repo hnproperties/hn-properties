@@ -11,6 +11,8 @@ export type Counts = {
   dueFollowUps: number;
   overdueFollowUps: number;
   visitsToday: number;
+  /** Owners reporting a property sold or rented, waiting on a call. */
+  ownerRequests: number;
   latest: { title: string; at: string } | null;
   nextVisit: { id: string; at: string; title: string; who: string | null } | null;
 };

@@ -174,6 +174,7 @@ export default function PublicForm({ endpoint, fields, hidden, submitLabel, succ
   const [fieldErrors, setFieldErrors] = useState<Record<string, string[]>>({});
   const [reference, setReference] = useState<string | null>(null);
   const [reviewing, setReviewing] = useState(false);
+  const reviewRef = useRef<HTMLDivElement>(null);
   // Money fields are entered as an amount plus a unit; the form submits plain rupees.
   const [money, setMoney] = useState<Record<string, { amount: string; unit: string }>>({});
 
@@ -200,7 +201,17 @@ export default function PublicForm({ endpoint, fields, hidden, submitLabel, succ
      */
     if (reviewBeforeSend && !reviewing) {
       setReviewing(true);
-      window.scrollTo({ top: 0, behavior: 'smooth' });
+      /*
+       * Scroll to the summary, not the top of the page.
+       *
+       * Sending them to the very top means landing back on the page heading and
+       * the four "how it works" steps, with the thing they just asked to see
+       * somewhere below the fold. The panel renders on this same tick, so the
+       * scroll waits a frame for it to exist.
+       */
+      requestAnimationFrame(() => {
+        reviewRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      });
       return;
     }
 
@@ -445,7 +456,7 @@ export default function PublicForm({ endpoint, fields, hidden, submitLabel, succ
       )}
 
       {reviewing && (
-        <div className="mt-8 rounded-2xl border-2 border-[var(--brand)] bg-[var(--brand-soft)] p-5 sm:p-6">
+        <div ref={reviewRef} className="mt-8 scroll-mt-24 rounded-2xl border-2 border-[var(--brand)] bg-[var(--brand-soft)] p-5 sm:p-6">
           <h3 className="display text-lg text-[var(--navy)]">Please check before sending</h3>
           <p className="mt-1 text-sm text-[var(--muted)]">
             This is what we will list. A wrong property type has to be corrected by phone once it is live,

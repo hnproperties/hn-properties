@@ -201,6 +201,11 @@ export default function CrmShell({ children }: { children: React.ReactNode }) {
       if (total > 0) return { count: total, tone: counts.overdueFollowUps > 0 ? 'alert' : 'warn' };
     }
     if (href === '/crm/site-visits' && counts.visitsToday > 0) return { count: counts.visitsToday, tone: 'info' };
+    // Owners waiting on a call to confirm a sale — the same weight as a listing
+    // waiting for review, because both are someone waiting on us.
+    if (href === '/crm/owner-requests' && counts.ownerRequests > 0) {
+      return { count: counts.ownerRequests, tone: 'alert' };
+    }
     return null;
   }
   const pathname = usePathname();
@@ -364,8 +369,17 @@ export default function CrmShell({ children }: { children: React.ReactNode }) {
                     + Add New
                   </button>
                 )}
+                {/*
+                  Anchored left on a phone, right from sm up.
+
+                  right-0 aligns the menu's right edge with the button's, which works
+                  on a laptop where the button sits on the right of the bar. On a
+                  phone the button is at the left, so a 224px menu ran off the left of
+                  the screen and half the options were unreachable. The width cap
+                  stops it overflowing the other way on a narrow phone.
+                */}
                 {addOpen && (
-                  <div className="absolute right-0 z-[200] mt-2 w-56 rounded-xl border bg-white py-1.5 shadow-2xl">
+                  <div className="absolute left-0 z-[200] mt-2 w-56 max-w-[calc(100vw-2rem)] rounded-xl border bg-white py-1.5 shadow-2xl sm:left-auto sm:right-0">
                     {addable.map((item) => (
                       <Link key={item.label} href={item.href} className="block px-4 py-2 text-sm hover:bg-[var(--paper)]">
                         {item.label}
