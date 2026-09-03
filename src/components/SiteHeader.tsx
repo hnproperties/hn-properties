@@ -184,13 +184,12 @@ export default function SiteHeader() {
                 >
                   {/* The artwork carries its own colour and depth, so it needs no
                       pill behind it — just a soft shadow to lift it off the glass. */}
-                  <Image
-                    src="/hot-deals-banner.png"
+                  <img
+                    src="/hot-deals-banner.webp"
                     alt=""
                     width={1000}
                     height={563}
-                    priority
-                    className="hot-flame h-11 w-auto drop-shadow-[0_3px_9px_rgba(220,38,0,0.45)] 2xl:h-12"
+                    className="h-11 w-auto drop-shadow-[0_3px_9px_rgba(220,38,0,0.45)] 2xl:h-12"
                   />
                 </Link>
               );
@@ -206,9 +205,9 @@ export default function SiteHeader() {
 
         {/* Hot Deals stays visible on phones — it is the loudest thing we have
             and hiding it behind the menu wastes it. */}
-        <Link href="/hot-deals" aria-label="Hot Deals" className="hot-flame ml-auto shrink-0 xl:hidden">
-          <Image
-            src="/hot-deals-banner.png"
+        <Link href="/hot-deals" aria-label="Hot Deals" className="ml-auto shrink-0 xl:hidden">
+          <img
+            src="/hot-deals-banner.webp"
             alt=""
             width={1000}
             height={563}
@@ -343,7 +342,7 @@ export default function SiteHeader() {
                     }`}
                   >
                     {entry.artwork ? (
-                      <Image src="/hot-deals-banner.png" alt="Hot Deals" width={1000} height={563} className="h-9 w-auto" />
+                      <img src="/hot-deals-banner.webp" alt="Hot Deals" width={1000} height={563} className="h-9 w-auto" />
                     ) : (
                       entry.label
                     )}

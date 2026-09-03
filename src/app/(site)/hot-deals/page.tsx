@@ -26,12 +26,11 @@ export default async function HotDealsPage() {
       */}
       <div className="flex flex-col items-center text-center">
         <h1 className="sr-only">Hot deals on property in {site.city}</h1>
-        <Image
-          src="/hot-deals-banner.png"
+        <img
+          src="/hot-deals-banner.webp"
           alt=""
           width={1000}
           height={563}
-          priority
           className="h-auto w-full max-w-[300px] sm:max-w-[420px] lg:max-w-[520px]"
         />
         <p className="mt-2 max-w-3xl text-lg text-[var(--muted)]">
