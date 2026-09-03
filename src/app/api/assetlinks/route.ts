@@ -12,15 +12,24 @@ export const dynamic = 'force-dynamic';
  * the key it was signed with. Without it the APK still runs, but with a browser
  * bar across the top, which rather defeats the point.
  *
- * Fingerprints come from the environment because they are a property of the
- * signing keys, not of this codebase, and they differ between the key used locally
- * and the one Google Play re-signs with. Set:
+ * Each app needs *two* fingerprints, and missing the second is what leaves the
+ * address bar in place on a Play install:
  *
- *   TWA_FINGERPRINT_APP   — for the marketplace app
- *   TWA_FINGERPRINT_CORE  — for HN Core
+ *   - the key the APK was signed with locally, used when sideloading
+ *   - the key Google re-signs with under Play App Signing, used by every install
+ *     from the Play Store
  *
- * Both are the "SHA-256 certificate fingerprint" shown under Play Console →
- * Release → Setup → App signing. Colons included, uppercase hex.
+ * They are different keys. An app verified for one is not verified for the other,
+ * and Android falls back to a Custom Tab — the blue bar with the URL and a close
+ * button — rather than running as a Trusted Web Activity.
+ *
+ * So each variable takes a comma-separated list. Set:
+ *
+ *   TWA_FINGERPRINT_APP   — marketplace app: "<upload key>,<Play signing key>"
+ *   TWA_FINGERPRINT_CORE  — HN Core, same shape
+ *
+ * The Play signing key is under Play Console → Test and release → Setup →
+ * App signing → "App signing key certificate" → SHA-256. Colons included.
  *
  * Missing values are skipped rather than emitted blank: a malformed entry causes a
  * verification failure that is considerably harder to diagnose than an absent one.
@@ -32,15 +41,25 @@ const APPS = [
 
 export function GET() {
   const statements = APPS.flatMap((app) => {
-    const fingerprint = process.env[app.env];
-    if (!fingerprint) return [];
+    const raw = process.env[app.env];
+    if (!raw) return [];
+
+    // Split, trim and upper-case: Android matches these literally, and a stray
+    // space or a lower-case hex digit is a failure that looks like no failure.
+    const fingerprints = raw
+      .split(',')
+      .map((value) => value.trim().toUpperCase())
+      .filter(Boolean);
+
+    if (!fingerprints.length) return [];
+
     return [
       {
         relation: ['delegate_permission/common.handle_all_urls'],
         target: {
           namespace: 'android_app',
           package_name: app.package,
-          sha256_cert_fingerprints: [fingerprint],
+          sha256_cert_fingerprints: fingerprints,
         },
       },
     ];

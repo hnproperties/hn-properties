@@ -47,6 +47,24 @@ export default function LivePulse({ onCounts }: { onCounts?: (counts: Counts) =>
       if (document.visibilityState === 'hidden') return;
       try {
         const response = await fetch('/api/crm/pulse', { cache: 'no-store' });
+
+        /*
+         * The session has gone — deactivated, removed from the team, role changed,
+         * or signed out elsewhere. Every one of those bumps sessionEpoch server
+         * side, so the very next request is rejected.
+         *
+         * This poll is the only thing that notices promptly. Without it a removed
+         * person's open tab keeps showing the desk until they happen to navigate,
+         * which is exactly the wrong moment to be relaxed about: revoking access
+         * should mean the screen clears, not that it clears eventually.
+         *
+         * Replace rather than push, so Back cannot return them to a cached page.
+         */
+        if (response.status === 401 || response.status === 403) {
+          window.location.replace('/login?ended=1');
+          return;
+        }
+
         if (!response.ok) return;
         const { data } = (await response.json()) as { data: Counts };
 

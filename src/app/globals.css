@@ -342,6 +342,56 @@ input[type='number'] { -moz-appearance: textfield; appearance: textfield; }
   100% { transform: scaleX(0.94); }
 }
 
+/* Hot Deals badge — a fire flicker.
+
+   The flames cannot be animated on their own: the artwork is a flat PNG with no
+   separate layer for them, so there is nothing to move independently of the text.
+   What this does instead is light the whole badge the way a flame lights what is
+   near it — brightness and warmth rising and falling on an irregular cycle, with a
+   glow behind that breathes slightly out of step.
+
+   Irregular is the point. Evenly spaced keyframes read as a pulsing logo; uneven
+   ones read as fire. The two animations also have different durations, so they
+   drift against each other rather than repeating in lockstep.
+
+   A true flame animation needs the artwork exported with the flames on their own
+   layer, as an animated SVG or Lottie file. */
+@keyframes ember {
+  0%   { filter: brightness(1) saturate(1); }
+  18%  { filter: brightness(1.11) saturate(1.14); }
+  31%  { filter: brightness(1.02) saturate(1.04); }
+  47%  { filter: brightness(1.15) saturate(1.2); }
+  62%  { filter: brightness(1.04) saturate(1.06); }
+  79%  { filter: brightness(1.09) saturate(1.12); }
+  100% { filter: brightness(1) saturate(1); }
+}
+
+@keyframes ember-glow {
+  0%, 100% { opacity: 0.35; transform: scale(0.94); }
+  40%      { opacity: 0.6;  transform: scale(1.06); }
+  70%      { opacity: 0.42; transform: scale(0.99); }
+}
+
+.hot-flame {
+  position: relative;
+  display: inline-block;
+  animation: ember 2.3s ease-in-out infinite;
+}
+
+/* The glow sits behind the badge, blurred and clipped to nothing — it is light
+   spilling off the flames, not an outline around the image. */
+.hot-flame::before {
+  content: '';
+  position: absolute;
+  inset: -18% -8%;
+  z-index: -1;
+  border-radius: 999px;
+  background: radial-gradient(ellipse at 50% 35%, rgba(255, 138, 24, 0.75), rgba(255, 82, 0, 0.28) 55%, transparent 72%);
+  filter: blur(10px);
+  animation: ember-glow 3.1s ease-in-out infinite;
+  pointer-events: none;
+}
+
 .progress-sliver {
   transform-origin: left;
   animation: progress-sliver 4s var(--ease-spring) forwards;
@@ -352,6 +402,7 @@ input[type='number'] { -moz-appearance: textfield; appearance: textfield; }
   /* `animation: none` above cancels the animation, but these use fill-mode `both`,
      so without resetting them here they would keep the keyframes' starting state
      and stay invisible. Anyone asking for reduced motion would get a blank page. */
+  .hot-flame, .hot-flame::before { animation: none; filter: none; opacity: 0.45; }
   .animate-rise, .animate-rise-1, .animate-rise-2, .animate-rise-3,
   .animate-arrive, .animate-arrive-card, .animate-arrive-late {
     opacity: 1;

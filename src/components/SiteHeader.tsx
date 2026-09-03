@@ -190,7 +190,7 @@ export default function SiteHeader() {
                     width={1000}
                     height={563}
                     priority
-                    className="h-11 w-auto drop-shadow-[0_3px_9px_rgba(220,38,0,0.45)] 2xl:h-12"
+                    className="hot-flame h-11 w-auto drop-shadow-[0_3px_9px_rgba(220,38,0,0.45)] 2xl:h-12"
                   />
                 </Link>
               );
@@ -206,7 +206,7 @@ export default function SiteHeader() {
 
         {/* Hot Deals stays visible on phones — it is the loudest thing we have
             and hiding it behind the menu wastes it. */}
-        <Link href="/hot-deals" aria-label="Hot Deals" className="ml-auto shrink-0 xl:hidden">
+        <Link href="/hot-deals" aria-label="Hot Deals" className="hot-flame ml-auto shrink-0 xl:hidden">
           <Image
             src="/hot-deals-banner.png"
             alt=""
