@@ -28,6 +28,17 @@ import path from 'path';
 const SRC = path.join(process.cwd(), 'source-icons', 'hot-deals.gif');
 const OUT = path.join(process.cwd(), 'public', 'hot-deals-banner.webp');
 
+/**
+ * The finished logo, laid over every frame.
+ *
+ * The GIF animates flames across the lettering as well as behind it, which makes
+ * the words shimmer and hurts legibility at header size. This artwork already has
+ * the text in front of its own flames, so compositing it on top pins the words
+ * still and leaves only the flames around the edges moving — which is the effect
+ * the animation was wanted for in the first place.
+ */
+const LOGO = path.join(process.cwd(), 'public', 'hot-deals-banner.png');
+
 /** Below this a pixel is background; above it, fully opaque. Between, it ramps. */
 const CUT_LOW = 10;
 const CUT_HIGH = 58;
@@ -42,6 +53,11 @@ const OUT_H = 180;
 async function main() {
   const meta = await sharp(SRC, { animated: true }).metadata();
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'hot-deals-'));
+
+  const logo = await sharp(LOGO)
+    .resize(OUT_W, OUT_H, { fit: 'contain', background: { r: 0, g: 0, b: 0, alpha: 0 } })
+    .png()
+    .toBuffer();
 
   let count = 0;
   for (let page = 0; page < meta.pages!; page += FRAME_STEP) {
@@ -74,6 +90,7 @@ async function main() {
     }
 
     await sharp(out, { raw: { width: OUT_W, height: OUT_H, channels: 4 } })
+      .composite([{ input: logo }])
       .png()
       .toFile(path.join(dir, `f${String(count).padStart(3, '0')}.png`));
     count += 1;
@@ -83,11 +100,11 @@ async function main() {
   // background comes straight back.
   execFileSync('ffmpeg', [
     '-y',
-    '-framerate', '8',
+    '-framerate', '5',
     '-i', path.join(dir, 'f%03d.png'),
     '-loop', '0',
     '-c:v', 'libwebp_anim',
-    '-q:v', '45',
+    '-q:v', '48',
     '-compression_level', '6',
     '-pix_fmt', 'yuva420p',
     OUT,

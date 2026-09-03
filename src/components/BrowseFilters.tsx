@@ -29,6 +29,43 @@ const RENT_BUDGETS = [
   { value: '100000-', label: 'Above ₹1 L' },
 ];
 
+/**
+ * Plot area bands, in square feet.
+ *
+ * Ranges rather than a slider: a slider needs two precise numbers from someone who
+ * is browsing, and most people looking for land think in rough sizes — "about a
+ * thousand feet" — not in exact bounds.
+ */
+const PLOT_AREAS = [
+  { value: '0-500', label: 'Up to 500 sq.ft' },
+  { value: '500-1000', label: '500 – 1,000 sq.ft' },
+  { value: '1000-1500', label: '1,000 – 1,500 sq.ft' },
+  { value: '1500-2500', label: '1,500 – 2,500 sq.ft' },
+  { value: '2500-5000', label: '2,500 – 5,000 sq.ft' },
+  { value: '5000-10000', label: '5,000 – 10,000 sq.ft' },
+  { value: '10000-', label: 'Above 10,000 sq.ft' },
+];
+
+/**
+ * Property types where plot area is a thing buyers filter on.
+ *
+ * Left off flats and apartments deliberately: those are bought on carpet or
+ * built-up area, and a plot-area filter there would either match nothing or match
+ * the whole building's footprint. Offering a filter that cannot work is worse than
+ * not offering it.
+ */
+const PLOT_AREA_SLUGS = [
+  // Slugs, not names. Note "housevilla" and "commercial-shopshowroom": slugify
+  // strips the slash without putting a hyphen in its place, so these are not the
+  // hyphenated forms you would expect from reading the category names.
+  'housevilla', 'farmhouse', 'residential-plot',
+  'commercial-shopshowroom', 'office-space', 'commercial-building',
+  'warehouse', 'godown', 'hotel', 'restaurant',
+  'institutional-property', 'commercial-plot',
+  'agricultural-land', 'farmland', 'industrial-land',
+  'development-land', 'open-yard',
+];
+
 const SEGMENT_LABEL: Record<string, string> = {
   RESIDENTIAL: 'Residential',
   COMMERCIAL: 'Commercial',
@@ -71,7 +108,21 @@ export default function BrowseFilters({ categories, locations, segments, showTyp
 
   const current = (key: string) => params.get(key) ?? '';
   const budgetValue = `${params.get('min') ?? ''}-${params.get('max') ?? ''}`;
-  const activeCount = ['category', 'segment', 'location', 'min', 'max', 'beds', 'verified', 'ready', 'type'].filter((k) => params.get(k)).length;
+  const plotAreaValue = `${params.get('areaMin') ?? ''}-${params.get('areaMax') ?? ''}`;
+
+  /*
+   * Whether plot area is worth offering.
+   *
+   * With a type chosen, show it only if that type is one where plot area is how
+   * people compare. With nothing chosen, show it whenever any listed type would
+   * qualify — hiding it until a type is picked would leave someone browsing land
+   * with no way to narrow by size, which is the main thing they care about.
+   */
+  const chosenCategory = current('category');
+  const showPlotArea = chosenCategory
+    ? PLOT_AREA_SLUGS.includes(chosenCategory)
+    : categories.some((category) => PLOT_AREA_SLUGS.includes(category.value));
+  const activeCount = ['category', 'segment', 'location', 'min', 'max', 'areaMin', 'areaMax', 'beds', 'verified', 'ready', 'type'].filter((k) => params.get(k)).length;
 
   const visibleCategories = showAllCategories ? categories : categories.slice(0, 6);
   const visibleLocations = showAllLocations ? locations : locations.slice(0, 6);
@@ -166,6 +217,31 @@ export default function BrowseFilters({ categories, locations, segments, showTyp
           </button>
         )}
       </Section>
+
+      {/*
+        Plot area, after Locality — you pick where before you pick how big.
+        Shown only when the chosen property type is one where plot area means
+        something, or when nothing is chosen yet and it might still apply.
+      */}
+      {showPlotArea && (
+        <Section title="Plot area">
+          {PLOT_AREAS.map((band) => (
+            <label key={band.value} className="flex cursor-pointer items-center gap-2.5">
+              <input
+                type="radio"
+                name="plotArea"
+                className="h-4 w-4"
+                checked={plotAreaValue === band.value}
+                onChange={() => {
+                  const [areaMin, areaMax] = band.value.split('-');
+                  apply({ areaMin, areaMax });
+                }}
+              />
+              <span className="text-[var(--ink-soft)]">{band.label}</span>
+            </label>
+          ))}
+        </Section>
+      )}
 
       <Section title="Budget">
         {budgets.map((budget) => (
