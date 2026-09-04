@@ -1,19 +1,24 @@
 /**
- * Turns the Hot Deals GIF into a transparent animated WebP.
+ * Turns the green-screen Hot Deals GIF into a transparent animated WebP.
  *
- * Two problems with the GIF as supplied: it sits on solid black, which would show
- * as a rectangle behind the badge, and it is 5.8 MB across 128 frames — a lot to
- * send to a phone on mobile data for a decorative header image.
+ * Green screen rather than the earlier black background, and that matters: keying
+ * black out of artwork whose flames fade to dark left a scatter of dark specks
+ * around the logo, because there was no way to tell background from the darkest
+ * parts of the image. Green shares nothing with orange flames, so the separation
+ * is clean.
  *
- * Keying the black out has to happen frame by frame, and the encoding has to
- * happen afterwards, because sharp cannot do both. Writing a tall strip of frames
- * and asking sharp for an animated WebP silently produces a single very tall
- * still: no ANIM chunk, no animation, and nothing in the API reports a problem.
- * So sharp keys the frames and ffmpeg assembles them.
+ * Two things beyond a plain threshold:
  *
- * The key itself is a soft ramp rather than a hard cut-off. Flames fade towards
- * black at their edges, so a hard threshold either leaves a dark halo around every
- * flame or eats the tips. Ramping alpha across the darkest range keeps the glow.
+ * The key ramps rather than cuts. A hard cut-off leaves a hard edge that looks
+ * pasted on at any size; ramping alpha through the fringe keeps the soft edge the
+ * artwork was drawn with.
+ *
+ * And it de-spills. Green light bounces onto the subject in the original, leaving
+ * a lime rim once the background is gone. Pulling green back toward the other
+ * channels in the fringe removes it.
+ *
+ * Encoding is ffmpeg's job. Sharp can key frames but silently writes a single very
+ * tall still when asked for an animation from raw frames — no ANIM chunk, no error.
  *
  * Requires ffmpeg on PATH.
  *
@@ -25,63 +30,67 @@ import fs from 'fs';
 import os from 'os';
 import path from 'path';
 
-const SRC = path.join(process.cwd(), 'source-icons', 'hot-deals.gif');
+const SRC = path.join(process.cwd(), 'source-icons', 'hot-deals-green.gif');
 const OUT = path.join(process.cwd(), 'public', 'hot-deals-banner.webp');
 
 /**
- * The finished logo, laid over every frame.
+ * Output size.
  *
- * The GIF animates flames across the lettering as well as behind it, which makes
- * the words shimmer and hurts legibility at header size. This artwork already has
- * the text in front of its own flames, so compositing it on top pins the words
- * still and leaves only the flames around the edges moving — which is the effect
- * the animation was wanted for in the first place.
+ * The Hot Deals page shows this about 520px wide, so 600 keeps it crisp there
+ * without paying for detail nobody sees. The 480px source is upscaled slightly —
+ * that adds no real detail, but it stops the browser scaling up from below the
+ * display size, which is what made the previous version look soft.
  */
-const LOGO = path.join(process.cwd(), 'public', 'hot-deals-banner.png');
+const OUT_W = 600;
+const OUT_H = 338;
 
-/** Below this a pixel is background; above it, fully opaque. Between, it ramps. */
-const CUT_LOW = 10;
-const CUT_HIGH = 58;
+/** Every fifth frame at 4fps. Enough for flames to move; few enough to stay small. */
+const FRAME_STEP = 5;
+const FPS = 4;
 
-/** Every fourth frame. 128 frames is far more than the eye needs at this size. */
-const FRAME_STEP = 4;
-
-/** The badge renders about 44px tall, so the 480x270 source is already generous. */
-const OUT_W = 320;
-const OUT_H = 180;
+/** Green dominance over red and blue. Above SOLID it is background; below FRINGE it is subject. */
+const SOLID = 60;
+const FRINGE = 25;
 
 async function main() {
   const meta = await sharp(SRC, { animated: true }).metadata();
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'hot-deals-'));
-
-  const logo = await sharp(LOGO)
-    .resize(OUT_W, OUT_H, { fit: 'contain', background: { r: 0, g: 0, b: 0, alpha: 0 } })
-    .png()
-    .toBuffer();
-
   let count = 0;
+
   for (let page = 0; page < meta.pages!; page += FRAME_STEP) {
+    /*
+     * Trim two pixels off each edge before scaling.
+     *
+     * The source GIF carries a faint one-pixel band along its top edge — an
+     * encoding artefact, not part of the artwork — which survives the key and
+     * shows as a hairline above the logo on any background.
+     */
     const frame = await sharp(SRC, { pages: 1, page })
-      .resize(OUT_W, OUT_H)
+      .extract({ left: 2, top: 2, width: meta.width! - 4, height: meta.pageHeight! - 4 })
+      .resize(OUT_W, OUT_H, { kernel: 'lanczos3' })
       .ensureAlpha()
       .raw()
       .toBuffer();
 
     const out = Buffer.alloc(OUT_W * OUT_H * 4);
+
     for (let i = 0; i < OUT_W * OUT_H; i += 1) {
       const r = frame[i * 4];
-      const g = frame[i * 4 + 1];
+      let g = frame[i * 4 + 1];
       const b = frame[i * 4 + 2];
 
-      // Brightest channel, not the average: a saturated red flame has a low mean
-      // but a high red, and averaging would leave it half transparent.
-      const level = Math.max(r, g, b);
-      const alpha =
-        level <= CUT_LOW
-          ? 0
-          : level >= CUT_HIGH
-            ? 255
-            : Math.round(((level - CUT_LOW) / (CUT_HIGH - CUT_LOW)) * 255);
+      const overRed = g - r;
+      const overBlue = g - b;
+      let alpha = 255;
+
+      if (overRed > SOLID && overBlue > SOLID) {
+        alpha = 0;
+      } else if (overRed > FRINGE && overBlue > FRINGE) {
+        alpha = Math.max(0, Math.min(255, Math.round(255 * (1 - Math.min(overRed, overBlue) / SOLID))));
+        // De-spill: cap green near the other channels so the edge is not lime.
+        const cap = Math.max(r, b);
+        if (g > cap) g = Math.round(cap + (g - cap) * 0.25);
+      }
 
       out[i * 4] = r;
       out[i * 4 + 1] = g;
@@ -90,7 +99,6 @@ async function main() {
     }
 
     await sharp(out, { raw: { width: OUT_W, height: OUT_H, channels: 4 } })
-      .composite([{ input: logo }])
       .png()
       .toFile(path.join(dir, `f${String(count).padStart(3, '0')}.png`));
     count += 1;
@@ -100,11 +108,11 @@ async function main() {
   // background comes straight back.
   execFileSync('ffmpeg', [
     '-y',
-    '-framerate', '5',
+    '-framerate', String(FPS),
     '-i', path.join(dir, 'f%03d.png'),
     '-loop', '0',
     '-c:v', 'libwebp_anim',
-    '-q:v', '48',
+    '-q:v', '75',
     '-compression_level', '6',
     '-pix_fmt', 'yuva420p',
     OUT,
@@ -114,10 +122,11 @@ async function main() {
 
   const bytes = fs.statSync(OUT).size;
   const container = fs.readFileSync(OUT).toString('latin1');
-  const frames = (container.match(/ANMF/g) ?? []).length;
-
-  console.log(`hot-deals-banner.webp — ${OUT_W}x${OUT_H}, ${frames} frames, ${(bytes / 1024).toFixed(0)} KB`);
   if (!container.includes('ANIM')) throw new Error('Output is not animated — check the ffmpeg step');
+
+  console.log(
+    `hot-deals-banner.webp — ${OUT_W}x${OUT_H}, ${(container.match(/ANMF/g) ?? []).length} frames, ${(bytes / 1024).toFixed(0)} KB`,
+  );
 }
 
 main().catch((error) => {
