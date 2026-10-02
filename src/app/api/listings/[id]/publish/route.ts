@@ -7,6 +7,7 @@ import { can } from '@/lib/rbac';
 import { forbidden, notFound, badRequest } from '@/lib/errors';
 import { nextListingPublicId, uniqueListingSlug } from '@/lib/ids';
 import { audit, activity, notify } from '@/lib/audit';
+import { notifyOwners } from '@/lib/notify-owners';
 import { getSetting } from '@/lib/settings';
 import { recomputeMatchesForListing } from '@/lib/matching';
 
@@ -43,6 +44,16 @@ export const POST = route(async (req: NextRequest, { params }: { params: { id: s
       entityType: 'listing', entityId: listing.id, propertyId: listing.propertyId, userId: user.id,
       action: 'Submission rejected', detail: body.reason,
     });
+    // Tell the owner, so they are not left wondering why their property never appeared.
+    if (listing.property.ownerId) {
+      await notifyOwners([listing.property.ownerId], {
+        kind: 'PROPERTY_REJECTED',
+        title: 'An update on your property',
+        body: `We could not list "${listing.publicTitle}" as submitted. Our team will reach out to help.`,
+        href: '/account',
+        tag: 'property-status',
+      });
+    }
     return ok(plain(updated));
   }
 
@@ -106,6 +117,22 @@ export const POST = route(async (req: NextRequest, { params }: { params: { id: s
   if (listing.assignedToId && listing.assignedToId !== user.id) {
     await notify([listing.assignedToId], { kind: 'LISTING_PUBLISHED', title: `${publicId} is live`, href: '/crm/listings' });
   }
+
+  // The owner's reward moment: their property is on the website. Sent to them, not
+  // the desk, so it goes through notifyOwners rather than notify.
+  if (listing.property.ownerId) {
+    const live = status === 'PUBLISHED';
+    await notifyOwners([listing.property.ownerId], {
+      kind: 'PROPERTY_PUBLISHED',
+      title: live ? 'Your property is live' : 'Your property is coming soon',
+      body: live
+        ? `"${listing.publicTitle}" is now on the website. We'll let you know about enquiries.`
+        : `"${listing.publicTitle}" is being prepared and will appear on the website shortly.`,
+      href: '/account',
+      tag: 'property-status',
+    });
+  }
+
   await recomputeMatchesForListing(listing.id);
 
   // Public pages are cached; without this the site can serve the old version for

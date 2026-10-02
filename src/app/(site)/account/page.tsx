@@ -6,6 +6,7 @@ import { currentOwner } from '@/lib/owner-session';
 import { inr, shortDate } from '@/lib/format';
 import OwnerListingCard from '@/components/account/OwnerListingCard';
 import AccountHeader from '@/components/account/AccountHeader';
+import NotificationsToggle from '@/components/NotificationsToggle';
 
 export const metadata: Metadata = {
   title: 'Your listed properties',
@@ -61,6 +62,10 @@ export default async function AccountPage() {
   return (
     <div className="wrap py-10">
       <AccountHeader name={account.name} email={account.email} photoUrl={account.photoUrl} />
+
+      <div className="mt-4">
+        <NotificationsToggle audience="OWNER" />
+      </div>
 
       <div className="mt-8 flex flex-wrap items-end justify-between gap-3">
         <div>

@@ -1,5 +1,6 @@
 import { createHash } from 'crypto';
 import { prisma } from './prisma';
+import { sendPushToUsers } from './push';
 import type { CurrentUser } from './auth';
 
 type AuditInput = {
@@ -73,5 +74,25 @@ export async function notify(userIds: string[], data: { kind: string; title: str
     });
   } catch (error) {
     console.error('[notify] failed', error);
+  }
+
+  /*
+   * Also push to those users' registered devices, so the alert reaches a phone with
+   * the app closed. Kept in its own try/catch and awaited, but it never rejects (see
+   * lib/push.ts) — a push-service hiccup must never stop the in-app notification
+   * above from being written, nor fail the caller's request.
+   */
+  try {
+    await sendPushToUsers(unique, {
+      title: data.title,
+      body: data.body,
+      href: data.href,
+      kind: data.kind,
+      // One tag per kind+recipient-set: a run of "overdue follow-ups" collapses into
+      // the latest rather than stacking on the lock screen.
+      tag: data.kind,
+    });
+  } catch (error) {
+    console.error('[notify] push failed', error);
   }
 }

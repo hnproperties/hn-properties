@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation';
 import { getCurrentUser } from '@/lib/auth';
 import { getDashboard } from '@/lib/dashboard';
 import Photo from '@/components/Photo';
+import NotificationsToggle from '@/components/NotificationsToggle';
 import { prisma, plain } from '@/lib/prisma';
 import { PUBLIC_LISTING_WHERE } from '@/lib/visibility';
 import { inr, area, relativeDue, dateTime, shortDate, coverFirst, type MediaItem } from '@/lib/format';
@@ -105,6 +106,9 @@ export default async function DeskPage() {
 
   return (
     <div className="space-y-6">
+      {/* Push opt-in for this device — each staff member turns it on for their own phone. */}
+      <NotificationsToggle audience="STAFF" />
+
       {/* Today */}
       <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
         <Stat icon="📋" value={data.leads.followUpsToday} title="Follow-ups due" href="/crm/follow-ups" tone="amber" />

@@ -97,6 +97,7 @@ model User {
   exports           ExportLog[]
   documents         PropertyDocument[]
   activities        Activity[]
+  pushSubscriptions PushSubscription[]
 
   @@index([roleId, isActive])
 }
@@ -1059,6 +1060,33 @@ model Notification {
   @@index([userId, isRead, createdAt])
 }
 
+/// A Web Push subscription (a browser / installed PWA / TWA endpoint) for one subscriber.
+///
+/// Exactly one of userId (staff) or ownerAccountId (a signed-in public owner) is set.
+/// The endpoint is unique, so re-subscribing from the same browser updates the keys
+/// rather than creating a duplicate. Dead endpoints (a 404/410 when sending) are
+/// deleted by the sender in src/lib/push.ts, so this table stays clean without a sweep.
+model PushSubscription {
+  id        String  @id @default(cuid())
+  endpoint  String  @unique
+  p256dh    String
+  auth      String
+  audience  String // 'STAFF' | 'OWNER'
+  userAgent String?
+
+  userId String?
+  user   User?   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  ownerAccountId String?
+  ownerAccount   OwnerAccount? @relation(fields: [ownerAccountId], references: [id], onDelete: Cascade)
+
+  createdAt  DateTime @default(now())
+  lastSeenAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([ownerAccountId])
+}
+
 model SavedSearch {
   id         String   @id @default(cuid())
   visitorKey String
@@ -1184,6 +1212,7 @@ model OwnerAccount {
   isActive     Boolean @default(true)
 
   requests  OwnerStatusRequest[]
+  pushSubscriptions PushSubscription[]
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 

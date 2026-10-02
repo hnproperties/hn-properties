@@ -76,15 +76,6 @@ const nextConfig = {
       { protocol: 'https', hostname: '*.public.blob.vercel-storage.com' },
     ],
   },
-  /*
-   * Android looks for Digital Asset Links at this exact path, and a folder whose
-   * name starts with a dot is not something the app router will serve, so the
-   * request is rewritten to a normal route instead.
-   */
-  async rewrites() {
-    return [{ source: '/.well-known/assetlinks.json', destination: '/api/assetlinks' }];
-  },
-
   async headers() {
     return [
       { source: '/:path*', headers: securityHeaders },
