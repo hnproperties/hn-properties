@@ -1,0 +1,22 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "in.co.hnproperties.app",
+      "sha256_cert_fingerprints": [
+        "A8:58:46:5E:7F:3E:F3:64:66:5E:D2:C7:B6:CC:D5:09:8A:DA:6D:F8:70:B1:F4:37:BC:EC:E9:77:3E:0B:7F:AF"
+      ]
+    }
+  },
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "in.co.hnproperties.core",
+      "sha256_cert_fingerprints": [
+        "A8:58:46:5E:7F:3E:F3:64:66:5E:D2:C7:B6:CC:D5:09:8A:DA:6D:F8:70:B1:F4:37:BC:EC:E9:77:3E:0B:7F:AF"
+      ]
+    }
+  }
+]
