@@ -68,16 +68,6 @@ export async function middleware(req: NextRequest) {
    */
   const isCrmHost = host.startsWith('crm.');
 
-// The bare domain (no www) must redirect to www. Otherwise requests hit the
-// app with a different host, cookies don't match, and pages 404.
-const isRootDomain = !host.startsWith('www.') && !isCrmHost;
-
-if (isRootDomain) {
-  const target = url.clone();
-  target.host = `www.${host}`;
-  return NextResponse.redirect(target, 308);
-}
-
   /*
    * Once the subdomain is live, /crm on the main domain moves there.
    *
