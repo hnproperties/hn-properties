@@ -6,7 +6,7 @@ import { PUBLIC_LISTING_WHERE, PUBLIC_LISTING_SELECT } from '@/lib/visibility';
 import PropertyCard from '@/components/PropertyCard';
 import { site } from '@/lib/constants';
 
-export const revalidate = 60;
+export const dynamic = 'force-dynamic';
 
 export const metadata: Metadata = {
   title: `Search properties in ${site.city}`,

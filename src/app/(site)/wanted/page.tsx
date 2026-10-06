@@ -4,7 +4,7 @@ import { getPublicRequirements } from '@/lib/public-data';
 import { inr, area, shortDate } from '@/lib/format';
 import { label, site, waLink } from '@/lib/constants';
 
-export const revalidate = 300;
+export const dynamic = 'force-dynamic';
 
 export const metadata: Metadata = {
   title: `Property demand in ${site.city}`,

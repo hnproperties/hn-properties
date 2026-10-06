@@ -5,7 +5,7 @@ import MarketFilters from '@/components/MarketFilters';
 import { getListings, getPublicIndexes, getLocationsWithInventory } from '@/lib/public-data';
 import { site } from '@/lib/constants';
 
-export const revalidate = 300;
+export const dynamic = 'force-dynamic';
 
 /** Only localities that actually hold inventory get a page — no thin duplicates. */
 export async function generateStaticParams() {

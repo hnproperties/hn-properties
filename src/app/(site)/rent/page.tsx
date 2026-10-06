@@ -7,7 +7,7 @@ import { getListings, getFacets } from '@/lib/public-data';
 import type { PublicQuery } from '@/lib/search';
 import { site } from '@/lib/constants';
 
-export const revalidate = 120;
+export const dynamic = 'force-dynamic';
 
 export const metadata: Metadata = {
   title: `Property on rent in ${site.city}`,

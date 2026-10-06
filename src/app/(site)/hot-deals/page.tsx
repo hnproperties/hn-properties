@@ -5,7 +5,7 @@ import { getHotDeals } from '@/lib/public-data';
 import PropertyCard from '@/components/PropertyCard';
 import { site } from '@/lib/constants';
 
-export const revalidate = 300;
+export const dynamic = 'force-dynamic';
 
 export const metadata: Metadata = {
   title: `Hot deals on property in ${site.city}`,

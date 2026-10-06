@@ -5,7 +5,7 @@ import { getFeatured, getRecent, getComingSoon, getPublicIndexes, getLocationsWi
 import { site } from '@/lib/constants';
 import { PhoneIcon } from '@/components/SocialIcons';
 
-export const revalidate = 300;
+export const dynamic = 'force-dynamic';
 
 const CATEGORY_TILES = [
   { icon: '🏠', title: 'Residential', body: 'Houses, flats, villas', href: '/buy?segment=RESIDENTIAL', tint: 'bg-[#e8f4fa] text-[#106a94]' },

@@ -10,7 +10,7 @@ import { whatsappListingMessage } from '@/lib/messaging';
 import { inr, inrFull, area, ratePerUnit, coverFirst, shortDate, type MediaItem } from '@/lib/format';
 import { label, site, waLink, placeLine } from '@/lib/constants';
 
-export const revalidate = 120;
+export const dynamic = 'force-dynamic';
 
 export async function generateMetadata({ params }: { params: { publicId: string } }): Promise<Metadata> {
   const listing = await getListingByPublicId(params.publicId);
