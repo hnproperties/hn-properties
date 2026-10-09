@@ -12,7 +12,7 @@
   "navigationDividerColorDark": "#000000",
   "backgroundColor": "#F4F7FA",
   "enableNotifications": true,
-  "startUrl": "/",
+  "startUrl": "https://crm.hnproperties.co.in/",
   "iconUrl": "https://crm.hnproperties.co.in/icon-app-512.png",
   "maskableIconUrl": "https://crm.hnproperties.co.in/icon-app-maskable-512.png",
   "splashScreenFadeOutDuration": 300,
