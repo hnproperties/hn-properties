@@ -182,27 +182,8 @@ export default function SiteHeader() {
                     active ? 'ring-2 ring-[#ff5a00]/60 ring-offset-2 ring-offset-transparent' : ''
                   }`}
                 >
-                  {/* Small SVG badge — flames behind text, crisp at any size */}
-                  <svg viewBox="0 0 140 44" className="h-9 w-auto drop-shadow-[0_3px_9px_rgba(220,38,0,0.45)] 2xl:h-12" aria-hidden="true">
-                    <defs>
-                      <linearGradient id="hdText" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stopColor="#FFE066" />
-                        <stop offset="50%" stopColor="#FF8C00" />
-                        <stop offset="100%" stopColor="#FF4500" />
-                      </linearGradient>
-                      <filter id="hdShadow"><feDropShadow dx="0" dy="1" stdDeviation="1" floodColor="#000" floodOpacity="0.4" /></filter>
-                    </defs>
-                    {/* Flames behind text */}
-                    {[18,38,58,78,98,118].map((x,i) => (
-                      <ellipse key={i} cx={x} cy={34+((i%2)*4-2)} rx={7} ry={11}
-                        fill={['#FF4500','#FF6B00','#FF8C00','#FFD700'][i%4]}
-                        opacity="0.8" transform={`rotate(${(i%2===0?'':'-')}8 ${x} 34)`} />
-                    ))}
-                    {/* Text */}
-                    <text x="70" y="28" textAnchor="middle" fontSize="18" fontWeight="900"
-                      fontFamily="'Plus Jakarta Sans','Inter',system-ui,sans-serif"
-                      fill="url(#hdText)" filter="url(#hdShadow)" letterSpacing="1">HOT DEALS</text>
-                  </svg>
+                  {/* Animated Hot Deals GIF badge */}
+                  <img src="/hot-deals-banner.gif" alt="Hot Deals" className="h-9 w-auto drop-shadow-[0_3px_9px_rgba(220,38,0,0.45)] 2xl:h-12" />
                 </Link>
               );
             }
@@ -219,8 +200,8 @@ export default function SiteHeader() {
             and hiding it behind the menu wastes it. */}
         <Link href="/hot-deals" aria-label="Hot Deals" className="ml-auto shrink-0 xl:hidden">
           <img
-            src="/hot-deals-banner.webp"
-            alt=""
+            src="/hot-deals-banner.gif"
+            alt="Hot Deals"
             width={1000}
             height={563}
             className="h-11 w-auto drop-shadow-[0_0_5px_rgba(255,120,40,0.5)]"
@@ -354,23 +335,7 @@ export default function SiteHeader() {
                     }`}
                   >
                     {entry.artwork ? (
-                      <svg viewBox="0 0 140 44" className="h-9 w-auto" aria-hidden="true">
-                        <defs>
-                          <linearGradient id="hdText2" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="0%" stopColor="#FFE066" />
-                            <stop offset="50%" stopColor="#FF8C00" />
-                            <stop offset="100%" stopColor="#FF4500" />
-                          </linearGradient>
-                        </defs>
-                        {[18,38,58,78,98,118].map((x,i) => (
-                          <ellipse key={i} cx={x} cy={34+((i%2)*4-2)} rx={7} ry={11}
-                            fill={['#FF4500','#FF6B00','#FF8C00','#FFD700'][i%4]}
-                            opacity="0.8" transform={`rotate(${(i%2===0?'':'-')}8 ${x} 34)`} />
-                        ))}
-                        <text x="70" y="28" textAnchor="middle" fontSize="18" fontWeight="900"
-                          fontFamily="'Plus Jakarta Sans','Inter',system-ui,sans-serif"
-                          fill="url(#hdText2)" letterSpacing="1">HOT DEALS</text>
-                      </svg>
+                      <img src="/hot-deals-banner.gif" alt="Hot Deals" className="h-9 w-auto" />
                     ) : (
                       entry.label
                     )}
