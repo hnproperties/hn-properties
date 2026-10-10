@@ -1,6 +1,5 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
-import Image from 'next/image';
 import { getHotDeals } from '@/lib/public-data';
 import PropertyCard from '@/components/PropertyCard';
 import { site } from '@/lib/constants';
