@@ -3,7 +3,6 @@ import Link from 'next/link';
 import { getHotDeals } from '@/lib/public-data';
 import PropertyCard from '@/components/PropertyCard';
 import { site } from '@/lib/constants';
-import HotDealsBanner from '@/components/HotDealsBanner';
 
 export const dynamic = 'force-dynamic';
 
@@ -18,15 +17,9 @@ export default async function HotDealsPage() {
 
   return (
     <div className="wrap py-12">
-      {/*
-        The artwork carries the heading visually, but search engines and screen
-        readers still need real text — hence the sr-only h1 alongside it. The
-        image is decorative (alt="") because the h1 already says the same thing;
-        announcing it twice would be worse, not better.
-      */}
       <div className="flex flex-col items-center text-center">
         <h1 className="sr-only">Hot deals on property in {site.city}</h1>
-        <HotDealsBanner />
+        <img src="/hot-deals-banner.gif" alt="Hot Deals" className="w-full max-w-[340px] sm:max-w-[460px] lg:max-w-[560px]" />
         <p className="mt-2 max-w-3xl text-lg text-[var(--muted)]">
           Properties our team has picked out as sharply priced, urgent, or unusually well suited to the right
           buyer. These change often — if something here fits, call {site.phone} before it goes.
