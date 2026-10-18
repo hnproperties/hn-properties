@@ -178,13 +178,28 @@ export function ownerTypeFor(nameOrSlug?: string | null): string | undefined {
   return CATEGORY_SLUG_ALIASES[slug] ?? slug;
 }
 
+/**
+ * NEXT_PUBLIC_SITE_URL is pasted into the Vercel dashboard by hand, and nothing
+ * stops someone saving it as "hnproperties.co.in" instead of
+ * "https://hnproperties.co.in". That value gets glued onto paths everywhere
+ * (WhatsApp share messages, the JSON-LD on property pages, the sitemap, the page
+ * <head>) — so a missing scheme does not fail loudly, it silently produces a
+ * broken link like "hnproperties.co.inhttps://..." wherever the two get
+ * concatenated. Normalising it once, here, means every one of those call sites
+ * is safe without having to remember to check it each time.
+ */
+function withScheme(raw: string): string {
+  const trimmed = raw.trim().replace(/\/+$/, '');
+  return /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
+}
+
 export const site = {
   name: process.env.NEXT_PUBLIC_SITE_NAME || 'HN Properties',
   phone: process.env.NEXT_PUBLIC_CONTACT_PHONE || '9713041004',
   whatsapp: process.env.NEXT_PUBLIC_CONTACT_WHATSAPP || process.env.NEXT_PUBLIC_CONTACT_PHONE || '9713041004',
   email: process.env.NEXT_PUBLIC_CONTACT_EMAIL || 'hnpropertiesjbp@gmail.com',
   address: process.env.NEXT_PUBLIC_CONTACT_ADDRESS || 'Jabalpur, Madhya Pradesh',
-  url: process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000',
+  url: withScheme(process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'),
   city: process.env.NEXT_PUBLIC_DEFAULT_CITY || 'Jabalpur',
   state: process.env.NEXT_PUBLIC_DEFAULT_STATE || 'Madhya Pradesh',
   instagram: process.env.NEXT_PUBLIC_INSTAGRAM_URL || 'https://www.instagram.com/hnpropertiesjbp',

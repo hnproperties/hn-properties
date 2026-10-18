@@ -76,7 +76,11 @@ export async function middleware(req: NextRequest) {
    * which is most people, since it is the link everyone already has. Skipped
    * entirely until CRM_HOST is set, so deploying this ahead of DNS changes nothing.
    */
-  const crmHost = process.env.CRM_HOST?.trim();
+  // Same risk as NEXT_PUBLIC_SITE_URL: CRM_HOST is pasted into Vercel by hand, and
+  // if it ever gets saved with "https://" in front (or a trailing slash), setting
+  // `.host` below silently mangles the redirect target instead of throwing. Strip
+  // anything that isn't bare hostname before it gets used.
+  const crmHost = process.env.CRM_HOST?.trim().replace(/^https?:\/\//i, '').replace(/\/+$/, '');
   if (crmHost && !isCrmHost && (url.pathname === '/crm' || url.pathname.startsWith('/crm/'))) {
     const moved = new URL(url.toString());
     moved.host = crmHost;
