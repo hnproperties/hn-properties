@@ -23,9 +23,6 @@
     "seed": "tsx prisma/seed.ts"
   },
   "dependencies": {
-    "@capacitor/android": "^8.5.2",
-    "@capacitor/cli": "^8.5.2",
-    "@capacitor/core": "^8.5.2",
     "@prisma/client": "^5.20.0",
     "@vercel/blob": "^2.8.0",
     "bcryptjs": "^2.4.3",
