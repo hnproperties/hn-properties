@@ -66,6 +66,39 @@ const PLOT_AREA_SLUGS = [
   'development-land', 'open-yard',
 ];
 
+/**
+ * Large-acreage land, in acres rather than square feet — farmland and
+ * agricultural/industrial/development land are bought by the acre, often many
+ * acres, and the square-foot bands above (built for a house plot or a shop) would
+ * either all read "above 10,000 sq.ft" or just not match how anyone thinks about
+ * this kind of size. Values are still in square feet underneath (1 acre = 43,560
+ * sq.ft) so the area filter itself needs no change — only the bands shown differ.
+ */
+const PLOT_AREAS_LARGE_LAND = [
+  { value: '0-43560', label: 'Up to 1 acre' },
+  { value: '43560-130680', label: '1 – 3 acres' },
+  { value: '130680-217800', label: '3 – 5 acres' },
+  { value: '217800-435600', label: '5 – 10 acres' },
+  { value: '435600-1089000', label: '10 – 25 acres' },
+  { value: '1089000-', label: 'Above 25 acres' },
+];
+
+/**
+ * Matched against a category's display label, not its slug. The slug a category
+ * ends up with has drifted across a few different places in this codebase (see
+ * the note on PLOT_AREA_SLUGS below, where a couple of merged categories ended up
+ * with slugs nobody would guess) — the label is what's actually shown to people
+ * and is far less likely to silently stop matching after a rename.
+ */
+function labelHas(category: Facet | undefined, keywords: string[]): boolean {
+  if (!category) return false;
+  const label = category.label.toLowerCase();
+  return keywords.some((k) => label.includes(k));
+}
+
+const BEDROOM_KEYWORDS = ['flat', 'apartment', 'house', 'villa', 'builder floor', 'farmhouse'];
+const LARGE_LAND_KEYWORDS = ['farmland', 'agricultural land', 'industrial land', 'development land', 'open yard'];
+
 const SEGMENT_LABEL: Record<string, string> = {
   RESIDENTIAL: 'Residential',
   COMMERCIAL: 'Commercial',
@@ -119,9 +152,21 @@ export default function BrowseFilters({ categories, locations, segments, showTyp
    * with no way to narrow by size, which is the main thing they care about.
    */
   const chosenCategory = current('category');
+  const chosenCategoryFacet = categories.find((category) => category.value === chosenCategory);
   const showPlotArea = chosenCategory
     ? PLOT_AREA_SLUGS.includes(chosenCategory)
     : categories.some((category) => PLOT_AREA_SLUGS.includes(category.value));
+
+  // Bedrooms means nothing for a commercial plot, a godown, a warehouse — asking
+  // doesn't just look odd, it would filter a plot search against a field no plot
+  // listing has any value in, which it should never do.
+  const showBedrooms = chosenCategory
+    ? labelHas(chosenCategoryFacet, BEDROOM_KEYWORDS)
+    : categories.some((category) => labelHas(category, BEDROOM_KEYWORDS));
+
+  // Only matters once a specific land type is picked — with nothing chosen there
+  // is no one category to key the band set off, so default to the sq.ft bands.
+  const plotAreaBands = chosenCategory && labelHas(chosenCategoryFacet, LARGE_LAND_KEYWORDS) ? PLOT_AREAS_LARGE_LAND : PLOT_AREAS;
   const activeCount = ['category', 'segment', 'location', 'min', 'max', 'areaMin', 'areaMax', 'beds', 'verified', 'ready', 'type'].filter((k) => params.get(k)).length;
 
   const visibleCategories = showAllCategories ? categories : categories.slice(0, 6);
@@ -184,7 +229,23 @@ export default function BrowseFilters({ categories, locations, segments, showTyp
               type="checkbox"
               className="h-4 w-4 rounded"
               checked={current('category') === category.value}
-              onChange={(e) => apply({ category: e.target.checked ? category.value : '', segment: '' })}
+              onChange={(e) => {
+                const picked = e.target.checked ? category.value : '';
+                // Switching category can take away a filter that was showing —
+                // clear it rather than leaving it applied invisibly. Plot area is
+                // cleared too because the bands themselves differ (sq.ft vs
+                // acres); a leftover numeric range from the other scale wouldn't
+                // match any visible option and would otherwise keep filtering
+                // silently.
+                const stillHasBedrooms = picked && labelHas(category, BEDROOM_KEYWORDS);
+                const stillHasSameAreaScale = picked && labelHas(category, LARGE_LAND_KEYWORDS) === labelHas(chosenCategoryFacet, LARGE_LAND_KEYWORDS);
+                apply({
+                  category: picked,
+                  segment: '',
+                  ...(stillHasBedrooms ? {} : { beds: '' }),
+                  ...(stillHasSameAreaScale ? {} : { areaMin: '', areaMax: '' }),
+                });
+              }}
             />
             <span className="flex-1 text-[var(--ink-soft)]">{category.label}</span>
             <span className="text-sm text-[var(--muted)]">({category.count})</span>
@@ -225,7 +286,7 @@ export default function BrowseFilters({ categories, locations, segments, showTyp
       */}
       {showPlotArea && (
         <Section title="Plot area">
-          {PLOT_AREAS.map((band) => (
+          {plotAreaBands.map((band) => (
             <label key={band.value} className="flex cursor-pointer items-center gap-2.5">
               <input
                 type="radio"
@@ -261,22 +322,24 @@ export default function BrowseFilters({ categories, locations, segments, showTyp
         ))}
       </Section>
 
-      <Section title="Bedrooms" initiallyOpen={false}>
-        <div className="flex flex-wrap gap-2">
-          {['1', '2', '3', '4', '5'].map((n) => (
-            <button
-              key={n}
-              type="button"
-              onClick={() => apply({ beds: current('beds') === n ? '' : n })}
-              className={`rounded-lg border px-3 py-1.5 text-sm transition ${
-                current('beds') === n ? 'border-[var(--brand)] bg-[var(--brand-soft)] text-[var(--brand)]' : 'hover:border-[var(--brand)]'
-              }`}
-            >
-              {n}+
-            </button>
-          ))}
-        </div>
-      </Section>
+      {showBedrooms && (
+        <Section title="Bedrooms" initiallyOpen={false}>
+          <div className="flex flex-wrap gap-2">
+            {['1', '2', '3', '4', '5'].map((n) => (
+              <button
+                key={n}
+                type="button"
+                onClick={() => apply({ beds: current('beds') === n ? '' : n })}
+                className={`rounded-lg border px-3 py-1.5 text-sm transition ${
+                  current('beds') === n ? 'border-[var(--brand)] bg-[var(--brand-soft)] text-[var(--brand)]' : 'hover:border-[var(--brand)]'
+                }`}
+              >
+                {n}+
+              </button>
+            ))}
+          </div>
+        </Section>
+      )}
 
       <Section title="More" initiallyOpen={false}>
         {[
