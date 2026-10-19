@@ -1062,17 +1062,22 @@ model Notification {
 
 /// A Web Push subscription (a browser / installed PWA / TWA endpoint) for one subscriber.
 ///
-/// Exactly one of userId (staff) or ownerAccountId (a signed-in public owner) is set.
+/// For STAFF or OWNER, exactly one of userId / ownerAccountId is set and the device
+/// is tied to that signed-in identity. For VISITOR (anyone browsing, signed in or
+/// not) neither is set — the endpoint itself is the only credential, and the
+/// categories array says which broadcast channels this device wants to hear:
+/// currently 'LISTINGS' (every new published listing) and 'HOT_DEALS'.
 /// The endpoint is unique, so re-subscribing from the same browser updates the keys
 /// rather than creating a duplicate. Dead endpoints (a 404/410 when sending) are
 /// deleted by the sender in src/lib/push.ts, so this table stays clean without a sweep.
 model PushSubscription {
-  id        String  @id @default(cuid())
-  endpoint  String  @unique
-  p256dh    String
-  auth      String
-  audience  String // 'STAFF' | 'OWNER'
-  userAgent String?
+  id         String   @id @default(cuid())
+  endpoint   String   @unique
+  p256dh     String
+  auth       String
+  audience   String // 'STAFF' | 'OWNER' | 'VISITOR'
+  categories String[] @default([]) // only meaningful for VISITOR: 'LISTINGS' | 'HOT_DEALS'
+  userAgent  String?
 
   userId String?
   user   User?   @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -1085,6 +1090,7 @@ model PushSubscription {
 
   @@index([userId])
   @@index([ownerAccountId])
+  @@index([audience, categories])
 }
 
 model SavedSearch {

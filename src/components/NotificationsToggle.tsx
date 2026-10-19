@@ -39,7 +39,10 @@ const COPY = {
   },
 } as const;
 
-export default function NotificationsToggle({ audience }: { audience: Audience }) {
+// This component is the owner/staff toggle only — the visitor opt-in is a
+// separate component (VisitorNotificationsPrompt) with its own copy and flow, so
+// 'VISITOR' is deliberately excluded here even though Audience now includes it.
+export default function NotificationsToggle({ audience }: { audience: Extract<Audience, 'OWNER' | 'STAFF'> }) {
   const copy = COPY[audience];
   const [state, setState] = useState<PushState | null>(null);
   const [busy, setBusy] = useState(false);

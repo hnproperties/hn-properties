@@ -8,7 +8,10 @@
  * the server — so the two surfaces share one implementation and cannot drift.
  */
 
-export type Audience = 'OWNER' | 'STAFF';
+export type Audience = 'OWNER' | 'STAFF' | 'VISITOR';
+
+/** Broadcast channels a visitor (not signed in) can opt into. */
+export type VisitorCategory = 'LISTINGS' | 'HOT_DEALS';
 
 export type PushState =
   | 'unsupported' // no service worker / no push / (iOS) not installed
@@ -86,10 +89,13 @@ export async function currentPushState(): Promise<PushState> {
 /**
  * Ask permission, subscribe, and register the endpoint with the server.
  *
- * The server decides the identity from the session cookie; `audience` is only a
- * hint so the right session is checked on a shared host.
+ * For OWNER/STAFF the server decides the identity from the session cookie —
+ * `audience` is only a hint so the right session is checked on a shared host.
+ * For VISITOR there is no session at all; `categories` says which broadcast
+ * channels this device wants ('LISTINGS', 'HOT_DEALS') and the endpoint itself
+ * is the only credential, same as any other anonymous Web Push subscriber.
  */
-export async function enablePush(audience: Audience): Promise<PushState> {
+export async function enablePush(audience: Audience, categories?: VisitorCategory[]): Promise<PushState> {
   if (!pushSupported()) return 'unsupported';
 
   const permission = await Notification.requestPermission();
@@ -107,7 +113,7 @@ export async function enablePush(audience: Audience): Promise<PushState> {
   const response = await fetch('/api/push/subscribe', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ subscription: sub.toJSON(), audience }),
+    body: JSON.stringify({ subscription: sub.toJSON(), audience, categories }),
   });
   if (!response.ok) throw new Error('Could not save this device');
 

@@ -66,6 +66,22 @@ export async function sendPushToOwners(ownerAccountIds: string[], payload: PushP
   await deliverAndPrune(subs, payload);
 }
 
+/**
+ * Broadcast to every anonymous visitor who opted into a category — a new listing
+ * going live, or something landing on Hot Deals. Unlike the staff/owner senders
+ * this has no identity to scope to: every VISITOR device subscribed to this one
+ * category gets it, which can be a large fan-out, so callers should only invoke
+ * this for events that genuinely belong on a public channel.
+ */
+export async function sendPushToVisitors(category: string, payload: PushPayload): Promise<void> {
+  const subs = await prisma.pushSubscription.findMany({
+    where: { audience: 'VISITOR', categories: { has: category } },
+    select: { id: true, endpoint: true, p256dh: true, auth: true },
+  });
+
+  await deliverAndPrune(subs, payload);
+}
+
 // ─── Internal ────────────────────────────────────────────────────────────────
 
 type SubRow = { id: string; endpoint: string; p256dh: string; auth: string };

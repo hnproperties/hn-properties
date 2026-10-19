@@ -5,6 +5,7 @@ import { enquirySchema } from '@/lib/validators';
 import { tooMany } from '@/lib/errors';
 import { nextCode } from '@/lib/ids';
 import { hashIp, notify, activity } from '@/lib/audit';
+import { notifyOwners } from '@/lib/notify-owners';
 import { emitChange } from '@/lib/events';
 
 export const dynamic = 'force-dynamic';
@@ -24,7 +25,10 @@ export const POST = route(async (req: NextRequest) => {
   const listing = input.listingId
     ? await prisma.listing.findUnique({
         where: { id: input.listingId },
-        select: { id: true, publicId: true, publicTitle: true, assignedToId: true },
+        select: {
+          id: true, publicId: true, publicTitle: true, assignedToId: true,
+          property: { select: { ownerId: true } },
+        },
       })
     : null;
 
@@ -66,6 +70,18 @@ export const POST = route(async (req: NextRequest) => {
       title: `New enquiry: ${input.name}`,
       body: listing.publicTitle,
       href: `/crm/leads`,
+    });
+  }
+  // Tell the owner too, not just the desk — this was previously silent to them,
+  // so someone could enquire about their property and they would never know
+  // unless they happened to check the account page themselves.
+  if (listing?.property.ownerId) {
+    await notifyOwners([listing.property.ownerId], {
+      kind: 'ENQUIRY_RECEIVED',
+      title: 'Someone enquired about your property',
+      body: `${input.name} asked about "${listing.publicTitle}". Our team will follow up.`,
+      href: '/account',
+      tag: 'property-enquiry',
     });
   }
   await activity({ entityType: 'lead', entityId: lead.id, action: 'Enquiry received from the website' });

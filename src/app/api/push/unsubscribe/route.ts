@@ -25,11 +25,16 @@ export const POST = route(async (req: NextRequest) => {
 
   const owner = await currentOwner();
   const user = owner ? null : await getCurrentUser();
-  if (!owner && !user) return ok({ removed: 0 });
 
+  // No session at all is expected for a VISITOR device — the endpoint itself is
+  // the only credential there, same as subscribing, so delete by endpoint alone
+  // but only among VISITOR rows, never letting an anonymous caller remove a
+  // signed-in owner's or staff member's subscription.
   const where = owner
     ? { endpoint, ownerAccountId: owner.id }
-    : { endpoint, userId: user!.id };
+    : user
+      ? { endpoint, userId: user.id }
+      : { endpoint, audience: 'VISITOR' };
 
   const result = await prisma.pushSubscription.deleteMany({ where });
   return ok({ removed: result.count });

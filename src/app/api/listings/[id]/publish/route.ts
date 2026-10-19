@@ -8,6 +8,7 @@ import { forbidden, notFound, badRequest } from '@/lib/errors';
 import { nextListingPublicId, uniqueListingSlug } from '@/lib/ids';
 import { audit, activity, notify } from '@/lib/audit';
 import { notifyOwners } from '@/lib/notify-owners';
+import { notifyVisitors } from '@/lib/notify-visitors';
 import { getSetting } from '@/lib/settings';
 import { recomputeMatchesForListing } from '@/lib/matching';
 
@@ -130,6 +131,15 @@ export const POST = route(async (req: NextRequest, { params }: { params: { id: s
         : `"${listing.publicTitle}" is being prepared and will appear on the website shortly.`,
       href: '/account',
       tag: 'property-status',
+    });
+  }
+
+  if (status === 'PUBLISHED') {
+    await notifyVisitors('LISTINGS', {
+      title: 'New listing on HN Properties',
+      body: updated.publicTitle,
+      href: `/property/${publicId}`,
+      tag: 'new-listing',
     });
   }
 

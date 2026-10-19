@@ -32,16 +32,25 @@ const subscriptionSchema = z.object({
 
 const bodySchema = z.object({
   subscription: subscriptionSchema,
-  audience: z.enum(['OWNER', 'STAFF']).optional(),
+  audience: z.enum(['OWNER', 'STAFF', 'VISITOR']).optional(),
+  categories: z.array(z.enum(['LISTINGS', 'HOT_DEALS'])).optional(),
   resubscribe: z.boolean().optional(),
 });
 
 type Identity =
   | { audience: 'STAFF'; id: string }
-  | { audience: 'OWNER'; id: string };
+  | { audience: 'OWNER'; id: string }
+  | { audience: 'VISITOR' };
 
-/** Resolve the caller's identity, honouring the hint when the matching session exists. */
-async function resolveIdentity(hint?: 'OWNER' | 'STAFF'): Promise<Identity | null> {
+/**
+ * Resolve the caller's identity, honouring the hint when the matching session exists.
+ *
+ * A hint of 'VISITOR' is always honoured with no session lookup — that is the
+ * point of the audience, anyone can subscribe to the public broadcast channels
+ * without signing in.
+ */
+async function resolveIdentity(hint?: 'OWNER' | 'STAFF' | 'VISITOR'): Promise<Identity | null> {
+  if (hint === 'VISITOR') return { audience: 'VISITOR' };
   if (hint === 'OWNER') {
     const owner = await currentOwner();
     return owner ? { audience: 'OWNER', id: owner.id } : null;
@@ -65,18 +74,20 @@ export const POST = route(async (req: NextRequest) => {
   const { endpoint, keys } = body.subscription;
   const userAgent = req.headers.get('user-agent')?.slice(0, 500) ?? null;
 
-  const ownerFields =
+  const identityFields =
     identity.audience === 'OWNER'
-      ? { audience: 'OWNER', ownerAccountId: identity.id, userId: null }
-      : { audience: 'STAFF', userId: identity.id, ownerAccountId: null };
+      ? { audience: 'OWNER', ownerAccountId: identity.id, userId: null, categories: [] }
+      : identity.audience === 'STAFF'
+        ? { audience: 'STAFF', userId: identity.id, ownerAccountId: null, categories: [] }
+        : { audience: 'VISITOR', userId: null, ownerAccountId: null, categories: body.categories ?? ['LISTINGS', 'HOT_DEALS'] };
 
   // Upsert on the unique endpoint: the same device re-subscribing updates keys and
   // lastSeenAt, and an endpoint that changes hands moves to the new identity rather
   // than lingering on the old one.
   await prisma.pushSubscription.upsert({
     where: { endpoint },
-    create: { endpoint, p256dh: keys.p256dh, auth: keys.auth, userAgent, ...ownerFields },
-    update: { p256dh: keys.p256dh, auth: keys.auth, userAgent, lastSeenAt: new Date(), ...ownerFields },
+    create: { endpoint, p256dh: keys.p256dh, auth: keys.auth, userAgent, ...identityFields },
+    update: { p256dh: keys.p256dh, auth: keys.auth, userAgent, lastSeenAt: new Date(), ...identityFields },
   });
 
   return ok({ subscribed: true });

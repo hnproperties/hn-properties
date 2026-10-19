@@ -4,6 +4,7 @@ import SiteFooter from '@/components/SiteFooter';
 import FloatingContact from '@/components/FloatingContact';
 import LiveRefresh from '@/components/LiveRefresh';
 import PwaSetup from '@/components/PwaSetup';
+import VisitorNotificationsPrompt from '@/components/VisitorNotificationsPrompt';
 
 /*
  * The marketplace manifest is linked here rather than through Next's app/manifest
@@ -25,6 +26,7 @@ export default function SiteLayout({ children }: { children: React.ReactNode }) 
       <FloatingContact />
       <LiveRefresh />
       <PwaSetup />
+      <VisitorNotificationsPrompt />
     </div>
   );
 }

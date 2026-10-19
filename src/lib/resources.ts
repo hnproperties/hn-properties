@@ -8,6 +8,7 @@ import { maskProperty, maskOwner, maskDeal } from './visibility';
 import { activity, notify } from './audit';
 import { nextCode, nextPropertyCode, nextListingPublicId, uniqueListingSlug } from './ids';
 import { recomputeMatchesForRequirement, recomputeMatchesForListing } from './matching';
+import { notifyVisitors } from './notify-visitors';
 import * as V from './validators';
 import type { CurrentUser } from './auth';
 
@@ -228,6 +229,17 @@ export const listingResource: ResourceDef = {
   afterCreate: async (row) => {
     await recomputeMatchesForListing(row.id);
     refreshPublicPages(row.publicId);
+    // A listing can be created already PUBLISHED (the CRM wizard allows this, unlike
+    // an owner submission which always starts pending review) — that is a new
+    // listing going live just as much as the status changing on an edit is.
+    if (row.status === 'PUBLISHED') {
+      await notifyVisitors('LISTINGS', {
+        title: 'New listing on HN Properties',
+        body: row.publicTitle,
+        href: `/property/${row.publicId}`,
+        tag: 'new-listing',
+      });
+    }
   },
   afterDelete: async (existing) => {
     // Without this the listing lingers on the cached public pages until they expire.
@@ -275,6 +287,24 @@ export const listingResource: ResourceDef = {
         userId: user.id,
         action: 'Status changed',
         detail: `${existing.status} → ${row.status}`,
+      });
+    }
+    // Broadcasts on the transition only, never on every save of an already-live
+    // listing — otherwise an unrelated price edit would re-announce it.
+    if (row.status === 'PUBLISHED' && existing.status !== 'PUBLISHED') {
+      await notifyVisitors('LISTINGS', {
+        title: 'New listing on HN Properties',
+        body: row.publicTitle,
+        href: `/property/${row.publicId}`,
+        tag: 'new-listing',
+      });
+    }
+    if (row.isHotDeal && !existing.isHotDeal) {
+      await notifyVisitors('HOT_DEALS', {
+        title: '🔥 New Hot Deal on HN Properties',
+        body: row.publicTitle,
+        href: `/property/${row.publicId}`,
+        tag: 'hot-deal',
       });
     }
     await recomputeMatchesForListing(row.id);
