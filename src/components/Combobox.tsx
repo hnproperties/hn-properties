@@ -157,7 +157,7 @@ export default function Combobox({ id, options, value, onChange, placeholder, cl
                 onMouseDown={(e) => e.preventDefault()}
                 onClick={keepTyped}
                 onMouseEnter={() => setHighlight(0)}
-                className={`flex w-full items-center gap-2 border-b px-4 py-2.5 text-left text-sm font-semibold ${
+                className={`flex w-full items-center gap-2 border-b px-4 py-2.5 text-left text-base font-semibold ${
                   highlight === 0 ? 'bg-[var(--brand-soft)] text-[var(--brand)]' : 'text-[var(--brand)]'
                 }`}
               >
@@ -176,7 +176,7 @@ export default function Combobox({ id, options, value, onChange, placeholder, cl
                 onMouseDown={(e) => e.preventDefault()}
                 onClick={() => choose(option)}
                 onMouseEnter={() => setHighlight(index + (offerNew ? 1 : 0))}
-                className={`block w-full px-4 py-2 text-left text-sm ${
+                className={`block w-full px-4 py-2.5 text-left text-base ${
                   index + (offerNew ? 1 : 0) === highlight ? 'bg-[var(--brand-soft)] text-[var(--brand)]' : 'text-[var(--ink-soft)]'
                 }`}
               >

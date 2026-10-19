@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import PropertyCard from '@/components/PropertyCard';
 import HeroSearch from '@/components/HeroSearch';
-import { getFeatured, getRecent, getComingSoon, getPublicIndexes, getLocationsWithInventory } from '@/lib/public-data';
+import { getFeatured, getRecent, getComingSoon, getPublicIndexes, getLocationsWithInventory, getLocalityCoverageCount } from '@/lib/public-data';
 import { site } from '@/lib/constants';
 import { PhoneIcon } from '@/components/SocialIcons';
 
@@ -31,12 +31,13 @@ const ACTIONS = [
 ];
 
 export default async function HomePage() {
-  const [featured, recent, comingSoon, indexes, localities] = await Promise.all([
+  const [featured, recent, comingSoon, indexes, localities, localityCoverage] = await Promise.all([
     getFeatured(8),
     getRecent(6),
     getComingSoon(3),
     getPublicIndexes(),
     getLocationsWithInventory(),
+    getLocalityCoverageCount(),
   ]);
 
   return (
@@ -53,17 +54,18 @@ export default async function HomePage() {
 
             {/* Icon centred above the label on phones so all three boxes match in
                 height and the text sits evenly; the inline pills return at lg. */}
-            <div className="mt-6 grid grid-cols-3 items-stretch gap-2 lg:flex lg:flex-wrap">
+            {/* Informational, not interactive — no box, no border, no hover state, so
+                nothing here reads as a button that does something when tapped. */}
+            <div className="mt-6 grid grid-cols-3 gap-3 lg:flex lg:flex-wrap lg:gap-8">
               {[
                 { icon: '✓', label: 'Verified Properties' },
                 { icon: '📍', label: `Local ${site.city} Expertise` },
                 { icon: '👤', label: 'Personalised Assistance' },
               ].map((chip) => (
-                <span
-                  key={chip.label}
-                  className="flex flex-col items-center justify-start gap-1.5 rounded-xl border border-white/40 bg-black/25 px-2 py-3 text-center text-[12px] leading-tight text-white transition duration-300 hover:-translate-y-0.5 hover:bg-black/35 lg:flex-row lg:gap-2 lg:rounded-full lg:px-4 lg:py-2 lg:text-base"
-                >
-                  <span className="text-base leading-none lg:text-inherit">{chip.icon}</span>
+                <span key={chip.label} className="flex flex-col items-center gap-2 text-center text-[12px] leading-tight text-white lg:flex-row lg:text-sm">
+                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-[var(--brass,#d9a954)] text-base text-[var(--brass,#d9a954)]">
+                    {chip.icon}
+                  </span>
                   <span className="text-balance">{chip.label}</span>
                 </span>
               ))}
@@ -80,7 +82,7 @@ export default async function HomePage() {
               </div>
               <div>
                 <dt className="text-xs uppercase tracking-[0.12em] text-white/75">Localities</dt>
-                <dd className="display text-shadow-hero text-4xl">{localities.length}</dd>
+                <dd className="display text-shadow-hero text-4xl">{localityCoverage}</dd>
               </div>
             </dl>
           </div>
@@ -134,7 +136,7 @@ export default async function HomePage() {
             </div>
             <div>
               <dt className="text-[11px] uppercase tracking-[0.12em] text-white/70">Localities</dt>
-              <dd className="display text-shadow-hero mt-1 text-2xl">{localities.length}</dd>
+              <dd className="display text-shadow-hero mt-1 text-2xl">{localityCoverage}</dd>
             </div>
           </dl>
         </div>

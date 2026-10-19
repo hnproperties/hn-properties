@@ -184,6 +184,29 @@ export default function GoogleLocationPicker({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  /*
+   * "Use my current location" lives in the parent (LocationPicker) and calls
+   * navigator.geolocation itself, then passes the new coordinates down through
+   * `value` — this map never heard about it. The map/marker above are only ever
+   * positioned once, at mount, from whatever `value` happened to be then.
+   *
+   * This effect re-centres whenever `chosen` changes to something the marker
+   * isn't already sitting on. The position check is what stops a loop: a click or
+   * drag on this map calls commit(), which updates `value`, which would otherwise
+   * re-trigger this effect right back at the same spot — comparing against the
+   * marker's actual current position makes an externally driven change (geolocation,
+   * or any other caller of onChange) the only thing that fires it.
+   */
+  useEffect(() => {
+    if (!ready || !map.current || !marker.current || !chosen) return;
+    const current = marker.current.getPosition();
+    const same = current && Math.abs(current.lat() - chosen.lat) < 1e-6 && Math.abs(current.lng() - chosen.lng) < 1e-6;
+    if (same) return;
+    marker.current.setPosition(chosen);
+    map.current.setCenter(chosen);
+    map.current.setZoom(17);
+  }, [chosen?.lat, chosen?.lng, ready]);
+
   return (
     <div>
       {/*

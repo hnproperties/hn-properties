@@ -224,6 +224,14 @@ export const listingResource: ResourceDef = {
       status,
       assignedToId: input.assignedToId ?? property.assignedToId ?? user.id,
       publishedAt: status === 'PUBLISHED' ? new Date() : null,
+      // publicLocationId exists so staff can CHOOSE to show a different (vaguer)
+      // locality publicly; it was never meant to require a second, separate pick
+      // for every listing. Left unset it defaulted to null, which meant this
+      // listing matched no locality anywhere on the public site — the locality
+      // filter on Buy/Rent silently missed it, and it never counted toward any
+      // locality's inventory. Defaulting it to the property's real location fixes
+      // both, while still letting a later edit override it for privacy.
+      publicLocationId: input.publicLocationId ?? property.locationId ?? null,
     };
   },
   afterCreate: async (row) => {
@@ -266,6 +274,16 @@ export const listingResource: ResourceDef = {
       });
     }
     if (next.status === 'PUBLISHED' && existing.status !== 'PUBLISHED') next.publishedAt = new Date();
+    // The CRM's locality field submits '' for "not picked", which would otherwise
+    // wipe out whatever locality this listing already had (its own, or the one
+    // defaulted in beforeCreate). Only fall back to the property's real location
+    // when there genuinely isn't one on file yet.
+    if (next.publicLocationId === '' && !existing.publicLocationId) {
+      const property = await prisma.property.findUnique({ where: { id: existing.propertyId }, select: { locationId: true } });
+      next.publicLocationId = property?.locationId ?? null;
+    } else if (next.publicLocationId === '') {
+      next.publicLocationId = existing.publicLocationId;
+    }
     return next;
   },
   beforeDelete: async (existing) => {

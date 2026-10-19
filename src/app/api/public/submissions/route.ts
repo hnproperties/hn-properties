@@ -40,9 +40,14 @@ export const POST = route(async (req: NextRequest) => {
    * "Jabalpur, Jabalpur" and never appears on its locality page.
    */
   const typedLocality = input.locality?.trim();
+  // Deliberately not filtering on isActive: a locality someone just added below is
+  // created inactive pending review, and the very next person who types the same
+  // name needs to land on that same row — excluding inactive ones here was
+  // creating a fresh duplicate locality every single time it was typed again,
+  // which is exactly the "why do I have to keep adding the same area" problem.
   const matchedLocality = typedLocality
     ? await prisma.location.findFirst({
-        where: { type: { in: ['AREA', 'LOCALITY'] }, isActive: true, name: { equals: typedLocality, mode: 'insensitive' } },
+        where: { type: { in: ['AREA', 'LOCALITY'] }, name: { equals: typedLocality, mode: 'insensitive' } },
         select: { id: true },
       })
     : null;
@@ -191,6 +196,9 @@ export const POST = route(async (req: NextRequest) => {
       isNegotiable: input.isNegotiable ?? true,
       publicTitle: property.title,
       publicDescription: input.description,
+      // Same reasoning as the CRM side: without this the listing matches no
+      // locality anywhere on the public site once it's approved and published.
+      publicLocationId: locationId,
     },
   });
 

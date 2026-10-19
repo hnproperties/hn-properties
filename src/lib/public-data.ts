@@ -156,6 +156,21 @@ export const getPublicIndexes = cache(async () => {
 });
 
 /** Localities that actually have inventory — used for the location landing pages. */
+/**
+ * Total localities HN Properties covers — a coverage claim, not an inventory count.
+ * Shown on the homepage as "X Localities"; deliberately separate from
+ * getLocationsWithInventory() below, which is inventory-filtered on purpose for
+ * its own use (only ever linking to a locality page that actually has something
+ * on it). This one just answers "how many areas do you know about".
+ */
+export async function getLocalityCoverageCount() {
+  try {
+    return await prisma.location.count({ where: { isActive: true, type: { in: ['AREA', 'LOCALITY'] } } });
+  } catch {
+    return 0;
+  }
+}
+
 export async function getLocationsWithInventory() {
   try {
     const rows = await prisma.location.findMany({
