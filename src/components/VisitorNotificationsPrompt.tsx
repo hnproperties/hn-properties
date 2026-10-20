@@ -85,7 +85,15 @@ export default function VisitorNotificationsPrompt() {
 
   return (
     <div className="fixed inset-x-0 bottom-0 z-40 flex justify-center px-4 pb-[calc(env(safe-area-inset-bottom,0px)+1rem)]">
-      <div className="plate w-full max-w-md border border-[var(--line)] bg-[var(--surface)] p-4 shadow-lg">
+      {/*
+        Was using var(--surface) and var(--line) — neither exists in this project
+        (the real names are --plate and --rule), so the browser silently fell back
+        to nothing, which is why this rendered almost see-through. Rebuilt here as
+        proper frosted glass: translucent white over backdrop-blur, opaque enough
+        to stay readable over any page content behind it, matching the same glass
+        treatment used in the mobile menu.
+      */}
+      <div className="w-full max-w-md rounded-2xl border border-white/80 bg-white/85 p-4 shadow-[0_12px_32px_-8px_rgba(16,35,60,0.35),inset_0_1px_0_rgba(255,255,255,0.8)] backdrop-blur-xl backdrop-saturate-150">
         {done ? (
           <p className="text-center text-sm font-medium text-[var(--navy)]">
             🔔 You're all set — you'll get alerts on this device.
@@ -106,7 +114,7 @@ export default function VisitorNotificationsPrompt() {
                 type="button"
                 onClick={dismiss}
                 aria-label="Dismiss"
-                className="shrink-0 rounded-lg px-2 py-1 text-[var(--muted)] hover:bg-[var(--surface-2)]"
+                className="shrink-0 rounded-lg px-2 py-1 text-[var(--muted)] hover:bg-black/5"
               >
                 ✕
               </button>

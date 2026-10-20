@@ -55,16 +55,43 @@ export default async function HomePage() {
             {/* Icon centred above the label on phones so all three boxes match in
                 height and the text sits evenly; the inline pills return at lg. */}
             {/* Informational, not interactive — no box, no border, no hover state, so
-                nothing here reads as a button that does something when tapped. */}
+                nothing here reads as a button that does something when tapped. Real
+                outline icons (not emoji) so they render identically everywhere,
+                rather than however each device's own emoji font happens to draw them. */}
             <div className="mt-6 grid grid-cols-3 gap-3 lg:flex lg:flex-wrap lg:gap-8">
               {[
-                { icon: '✓', label: 'Verified Properties' },
-                { icon: '📍', label: `Local ${site.city} Expertise` },
-                { icon: '👤', label: 'Personalised Assistance' },
+                {
+                  label: 'Verified Properties',
+                  icon: (
+                    <path d="M12 3l7 3v5c0 5-3.5 8.5-7 10-3.5-1.5-7-5-7-10V6l7-3z M9 12l2 2 4-4" />
+                  ),
+                },
+                {
+                  label: `Local ${site.city} Expertise`,
+                  icon: (
+                    <>
+                      <path d="M12 21s7-7.5 7-12a7 7 0 10-14 0c0 4.5 7 12 7 12z" />
+                      <circle cx="12" cy="9" r="2.5" />
+                    </>
+                  ),
+                },
+                {
+                  label: 'Personalised Assistance',
+                  icon: (
+                    <>
+                      <circle cx="9" cy="8" r="3" />
+                      <path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6" />
+                      <circle cx="17" cy="9" r="2.5" />
+                      <path d="M15.5 14a5 5 0 0 1 4.5 5" />
+                    </>
+                  ),
+                },
               ].map((chip) => (
                 <span key={chip.label} className="flex flex-col items-center gap-2 text-center text-[12px] leading-tight text-white lg:flex-row lg:text-sm">
-                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-[var(--brass,#d9a954)] text-base text-[var(--brass,#d9a954)]">
-                    {chip.icon}
+                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-[var(--brass,#d9a954)] text-[var(--brass,#d9a954)]">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5">
+                      {chip.icon}
+                    </svg>
                   </span>
                   <span className="text-balance">{chip.label}</span>
                 </span>
