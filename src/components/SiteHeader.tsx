@@ -62,15 +62,42 @@ const GLASS =
   'border border-white/80 bg-gradient-to-br from-white to-[#e9edf3] text-[var(--ink-soft)] shadow-[5px_5px_11px_rgba(163,177,198,0.45),-5px_-5px_11px_rgba(255,255,255,0.95),inset_0_1px_0_rgba(255,255,255,0.85)] hover:-translate-y-0.5 hover:text-[var(--brand)] hover:shadow-[7px_7px_14px_rgba(163,177,198,0.5),-7px_-7px_14px_rgba(255,255,255,1),inset_0_1px_0_rgba(255,255,255,0.9)]';
 
 /**
- * Menu tiles need more definition than the header pills: the sheet behind them
- * is the same near-white, so a faint blue tint, a firmer border and a deeper
- * shadow are what separate one tile from the next.
+ * True frosted glass for the mobile menu tiles — a translucent fill over
+ * backdrop-blur rather than an opaque gradient, so the page behind genuinely
+ * shows through (the iOS "Liquid Glass" look this was asked to match). The thin
+ * white border and top highlight are what give a glass panel its edge in real
+ * light; active darkens and drops the highlight so a tap reads as pressing into
+ * the glass rather than just recoloring it.
  */
 const MENU_TILE =
-  'border border-white/90 bg-gradient-to-br from-white to-[#dfe6f0] text-[var(--navy)] shadow-[4px_4px_10px_rgba(120,140,170,0.38),-3px_-3px_8px_rgba(255,255,255,1),inset_0_1px_0_rgba(255,255,255,0.9)] active:scale-[0.97]';
+  'border border-white/70 bg-white/35 backdrop-blur-xl text-[var(--navy)] shadow-[0_6px_18px_-6px_rgba(31,41,55,0.18),inset_0_1px_0_rgba(255,255,255,0.6)] transition active:scale-[0.97] active:bg-white/55 active:shadow-[inset_0_2px_6px_rgba(31,41,55,0.12)]';
 
+/** Active pill in the desktop nav bar — unrelated to the mobile menu glass
+ * treatment below; left exactly as it was. */
 const GLASS_ACTIVE =
   'border border-white/50 bg-[#e6eaf1] text-[var(--brand)] shadow-[inset_4px_4px_9px_rgba(163,177,198,0.6),inset_-4px_-4px_9px_rgba(255,255,255,0.95)]';
+
+/** Active state for a mobile menu tile — the glass counterpart to MENU_TILE. */
+const MENU_TILE_ACTIVE =
+  'border border-white/70 bg-white/70 backdrop-blur-xl text-[var(--brand)] shadow-[inset_0_2px_8px_rgba(21,131,181,0.18),inset_0_1px_0_rgba(255,255,255,0.7)]';
+
+/**
+ * The four buttons in the menu that actually do something (Search, Post, Your
+ * Listed Properties, Download) were flat single-tone fills — these give each one
+ * a real gradient plus the same glass highlight along the top edge, instead of
+ * reusing the site-wide .btn-primary/.btn-accent/.btn-navy classes which stay
+ * flat everywhere else on the site.
+ */
+const MENU_ACTION_BRAND =
+  'border border-white/40 bg-gradient-to-br from-[#2bb0e8] via-[var(--brand)] to-[#0e6a93] text-white shadow-[0_10px_24px_-8px_rgba(21,131,181,0.6),inset_0_1px_0_rgba(255,255,255,0.45)]';
+const MENU_ACTION_GOLD =
+  'border border-white/40 bg-gradient-to-br from-[#ffd37a] via-[var(--accent)] to-[#d9860f] text-[#3a2206] shadow-[0_10px_24px_-8px_rgba(245,165,36,0.55),inset_0_1px_0_rgba(255,255,255,0.55)]';
+const MENU_ACTION_NAVY =
+  'border border-white/15 bg-gradient-to-br from-[#1c4b85] via-[var(--navy)] to-[#061a33] text-white shadow-[0_10px_24px_-8px_rgba(14,47,90,0.6),inset_0_1px_0_rgba(255,255,255,0.25)]';
+
+/** The quieter rows at the bottom (Profile tint, Call, Instagram) — same glass
+ * family, lighter touch since these aren't the primary actions. */
+const MENU_TINT = 'border border-white/70 bg-white/35 backdrop-blur-xl shadow-[inset_0_1px_0_rgba(255,255,255,0.6)]';
 
 export default function SiteHeader() {
   const [open, setOpen] = useState(false);
@@ -270,17 +297,23 @@ export default function SiteHeader() {
       </div>
 
       {open && (
-        <nav id="site-menu" className="animate-rise border-t border-white/60 bg-[#eef1f6] xl:hidden">
-          <div className="wrap space-y-4 py-4">
+        <nav
+          id="site-menu"
+          className="animate-rise relative border-t border-white/50 bg-white/25 backdrop-blur-2xl backdrop-saturate-150 xl:hidden"
+        >
+          {/* A faint tint behind the blur gives the glass something to refract —
+              pure blur over a flat page can look grey rather than glassy. */}
+          <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-white/40 via-transparent to-[var(--brand-soft)]/40" />
+          <div className="wrap relative space-y-4 py-4">
             <form action="/search" className="flex gap-2">
               <input
                 type="search"
                 name="q"
                 placeholder="Property code or locality"
                 aria-label="Search properties"
-                className="field min-w-0 flex-1"
+                className="min-w-0 flex-1 rounded-lg border border-white/70 bg-white/40 px-4 py-3 text-[var(--navy)] placeholder:text-[var(--muted)] backdrop-blur-xl shadow-[inset_0_1px_0_rgba(255,255,255,0.6)] focus:outline-none focus:ring-2 focus:ring-[var(--brand)]/40"
               />
-              <button type="submit" className="btn btn-primary shrink-0" onClick={() => setOpen(false)}>
+              <button type="submit" className={`btn shrink-0 ${MENU_ACTION_BRAND}`} onClick={() => setOpen(false)}>
                 Search
               </button>
             </form>
@@ -298,7 +331,7 @@ export default function SiteHeader() {
                 href="/"
                 onClick={() => setOpen(false)}
                 className={`flex min-h-[52px] items-center justify-center rounded-[13px] px-3 py-2 text-center text-[15px] font-semibold transition ${
-                  pathname === '/' ? GLASS_ACTIVE : MENU_TILE
+                  pathname === '/' ? MENU_TILE_ACTIVE : MENU_TILE
                 }`}
               >
                 Home
@@ -306,7 +339,7 @@ export default function SiteHeader() {
               <Link
                 href="/account/profile"
                 onClick={() => setOpen(false)}
-                className="flex min-h-[52px] items-center justify-center rounded-[13px] border border-[var(--brand)]/25 bg-[var(--brand-soft)] px-3 py-2 text-center text-[15px] font-semibold text-[var(--brand)] transition active:scale-[0.97]"
+                className={`flex min-h-[52px] items-center justify-center rounded-[13px] px-3 py-2 text-center text-[15px] font-semibold text-[var(--brand)] transition active:scale-[0.97] ${MENU_TINT}`}
               >
                 Profile
               </Link>
@@ -331,7 +364,7 @@ export default function SiteHeader() {
                     href={entry.href}
                     onClick={() => setOpen(false)}
                     className={`flex min-h-[46px] items-center justify-center rounded-[13px] px-3 py-2 text-center text-[13.5px] font-semibold transition ${
-                      pathname === entry.href ? GLASS_ACTIVE : MENU_TILE
+                      pathname === entry.href ? MENU_TILE_ACTIVE : MENU_TILE
                     }`}
                   >
                     {entry.artwork ? (
@@ -356,11 +389,11 @@ export default function SiteHeader() {
               install. All one size up from the tiles above, because these are the
               things people came to the menu to do.
             */}
-            <Link href="/post" onClick={() => setOpen(false)} className="btn btn-primary w-full text-lg">
+            <Link href="/post" onClick={() => setOpen(false)} className={`btn w-full text-lg ${MENU_ACTION_BRAND}`}>
               Post Your Property
             </Link>
 
-            <Link href="/account" onClick={() => setOpen(false)} className="btn btn-accent w-full text-lg">
+            <Link href="/account" onClick={() => setOpen(false)} className={`btn w-full text-lg ${MENU_ACTION_GOLD}`}>
               Your Listed Properties
             </Link>
 
@@ -371,7 +404,7 @@ export default function SiteHeader() {
             */}
             <button
               type="button"
-              className="btn btn-navy w-full text-lg"
+              className={`btn w-full text-lg ${MENU_ACTION_NAVY}`}
               onClick={() => {
                 setOpen(false);
                 openInstallDialog();
@@ -389,7 +422,7 @@ export default function SiteHeader() {
             <div className="mt-1 flex flex-col gap-2.5 border-t pt-4">
               <a
                 href={`tel:${site.phone}`}
-                className="flex items-center justify-center gap-3 rounded-xl bg-[var(--brand-soft)] py-3.5 text-lg font-semibold text-[var(--brand)]"
+                className={`flex items-center justify-center gap-3 rounded-xl py-3.5 text-lg font-semibold text-[var(--brand)] ${MENU_TINT}`}
               >
                 <PhoneIcon className="h-6 w-6" />
                 Call {site.phone}
@@ -399,7 +432,7 @@ export default function SiteHeader() {
                   href={site.instagram}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex items-center justify-center gap-3 rounded-xl py-3.5 text-lg font-semibold ring-1 ring-black/5"
+                  className={`flex items-center justify-center gap-3 rounded-xl py-3.5 text-lg font-semibold text-[var(--navy)] ${MENU_TINT}`}
                 >
                   <InstagramIcon className="h-6 w-6 text-[#C13584]" />
                   Instagram
