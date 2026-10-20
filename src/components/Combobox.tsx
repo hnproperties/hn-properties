@@ -187,7 +187,15 @@ export default function Combobox({ id, options, value, onChange, placeholder, cl
         </ul>
       )}
 
-      {open && value.trim() && filtered.length === 0 && (
+      {/*
+        !offerNew matters here: when this field allows adding a new entry and the
+        typed text qualifies (3+ characters, no exact match), the dropdown above
+        already renders an "Add ..." option at the same position this message
+        would occupy — both are absolutely positioned, so without this guard they
+        stacked on top of each other and the "Add" option was unreachable,
+        exactly the locality field bug this was covering up.
+      */}
+      {open && value.trim() && filtered.length === 0 && !offerNew && (
         <div className="absolute z-[200] mt-1 w-full rounded-lg border bg-white px-4 py-3 text-sm text-[var(--muted)] shadow-2xl">
           No match — we will search for “{value.trim()}” as a keyword.
         </div>

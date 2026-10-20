@@ -92,8 +92,12 @@ export default function FloatingContact() {
           aria-expanded={open}
           aria-label={open ? 'Close menu' : 'Sell or give your property on rent'}
           onClick={() => setOpen((value) => !value)}
-          className="flex h-14 w-14 items-center justify-center rounded-full bg-[var(--accent)] text-[#3d2708] shadow-[0_10px_28px_-6px_rgba(245,165,36,0.75)] transition hover:bg-[#e0951c] sm:hidden"
+          className="relative flex h-14 w-14 items-center justify-center overflow-hidden rounded-full bg-gradient-to-b from-[#ffdf9e] via-[var(--accent)] to-[#d9860f] text-[#3d2708] shadow-[0_10px_28px_-6px_rgba(245,165,36,0.75),inset_0_1px_1px_rgba(255,255,255,0.7),inset_0_-4px_7px_rgba(0,0,0,0.22)] transition hover:-translate-y-0.5 sm:hidden"
         >
+          {/* The glossy "ceramic" highlight — a soft blurred ellipse near the top,
+              mimicking light catching a rounded, glazed surface. Same treatment on
+              all three buttons below. */}
+          <span aria-hidden="true" className="pointer-events-none absolute left-[16%] top-[10%] h-[40%] w-[60%] rounded-full bg-white/50 blur-[3px]" />
           {/*
             Drawn rather than typed. A "+" character is sized and centred by whatever
             font happens to load, so it never quite sits in the middle of the circle;
@@ -103,7 +107,7 @@ export default function FloatingContact() {
           <svg
             aria-hidden="true"
             viewBox="0 0 24 24"
-            className={`h-8 w-8 transition-transform duration-200 ${open ? 'rotate-45' : ''}`}
+            className={`relative h-8 w-8 transition-transform duration-200 ${open ? 'rotate-45' : ''}`}
             fill="none"
             stroke="currentColor"
             strokeWidth="2.6"
@@ -116,9 +120,10 @@ export default function FloatingContact() {
         <a
           href={`tel:${site.phone}`}
           aria-label={`Call ${site.name} on ${site.phone}`}
-          className="flex h-14 w-14 items-center justify-center rounded-full bg-[var(--navy)] text-white shadow-xl transition hover:bg-[var(--navy-deep)] sm:hidden"
+          className="relative flex h-14 w-14 items-center justify-center overflow-hidden rounded-full bg-gradient-to-b from-[#2f5f9e] via-[var(--navy)] to-[#061a33] text-white shadow-[0_10px_28px_-6px_rgba(14,47,90,0.75),inset_0_1px_1px_rgba(255,255,255,0.35),inset_0_-4px_7px_rgba(0,0,0,0.3)] transition hover:-translate-y-0.5 sm:hidden"
         >
-          <PhoneIcon className="h-7 w-7" />
+          <span aria-hidden="true" className="pointer-events-none absolute left-[16%] top-[10%] h-[40%] w-[60%] rounded-full bg-white/25 blur-[3px]" />
+          <PhoneIcon className="relative h-7 w-7" />
         </a>
 
         <a
@@ -126,10 +131,11 @@ export default function FloatingContact() {
           target="_blank"
           rel="noopener noreferrer"
           aria-label="Chat with us on WhatsApp"
-          className="group flex items-center gap-2.5 rounded-full bg-[#25D366] py-3.5 pl-3.5 pr-3.5 text-white shadow-[0_10px_30px_-8px_rgba(37,211,102,0.8)] transition duration-300 hover:-translate-y-0.5 hover:bg-[#1eb355] sm:pr-6"
+          className="group relative flex items-center gap-2.5 overflow-hidden rounded-full bg-gradient-to-b from-[#5eeb97] via-[#25D366] to-[#189950] py-3.5 pl-3.5 pr-3.5 text-white shadow-[0_10px_30px_-8px_rgba(37,211,102,0.8),inset_0_1px_1px_rgba(255,255,255,0.6),inset_0_-4px_7px_rgba(0,0,0,0.22)] transition duration-300 hover:-translate-y-0.5 sm:pr-6"
         >
-          <WhatsAppIcon className="h-8 w-8" />
-          <span className={`hidden text-base font-semibold sm:inline ${nudge ? '' : 'opacity-0'} transition-opacity`}>
+          <span aria-hidden="true" className="pointer-events-none absolute left-[10%] top-[12%] h-[38%] w-[32%] rounded-full bg-white/45 blur-[3px]" />
+          <WhatsAppIcon className="relative h-8 w-8" />
+          <span className={`relative hidden text-base font-semibold sm:inline ${nudge ? '' : 'opacity-0'} transition-opacity`}>
             Chat on WhatsApp
           </span>
         </a>

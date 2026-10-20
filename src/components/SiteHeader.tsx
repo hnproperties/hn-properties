@@ -111,6 +111,23 @@ export default function SiteHeader() {
     setOpen(false);
   }, [pathname]);
 
+  /*
+   * Without this, the Android back button (hardware key or the TWA's gesture)
+   * closes the whole app the instant it's pressed while this menu is open —
+   * there is nothing else in the browser history for it to step back to, since
+   * opening the menu never added an entry of its own. Pushing one dummy entry
+   * when the menu opens gives the back button something to consume first: it
+   * pops that entry, fires popstate, and this just closes the menu instead of
+   * exiting. The URL never actually changes, only a history marker is added.
+   */
+  useEffect(() => {
+    if (!open) return;
+    window.history.pushState({ hnMenu: true }, '');
+    const onPopState = () => setOpen(false);
+    window.addEventListener('popstate', onPopState);
+    return () => window.removeEventListener('popstate', onPopState);
+  }, [open]);
+
   return (
     <header className="sticky top-0 z-40 border-b border-white/60 bg-[#eef1f6]/85 backdrop-blur-xl backdrop-saturate-150">
       <div className="wrap flex h-[68px] items-center justify-between gap-4">
