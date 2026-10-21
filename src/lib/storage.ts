@@ -19,6 +19,27 @@ const driver = process.env.STORAGE_DRIVER ?? 'none';
 const safeName = (name: string) =>
   `${Date.now()}-${Math.random().toString(36).slice(2, 8)}-${name.replace(/[^a-zA-Z0-9._-]/g, '-').slice(-60)}`;
 
+/**
+ * Deletes files from the public bucket by URL — the counterpart to uploadPublic
+ * that was missing entirely. Deleting a property, or replacing its photos, was
+ * only ever removing the PropertyMedia database rows; the actual files stayed in
+ * Blob storage forever with nothing pointing at them, quietly growing the bill.
+ *
+ * Never throws: losing the database row is the thing that must succeed — if
+ * cleanup fails, an orphaned file costs a little storage, but a failed property
+ * deletion would be a much worse outcome for someone trying to remove a listing.
+ */
+export async function deletePublic(urls: string[]): Promise<void> {
+  const list = urls.filter(Boolean);
+  if (!list.length || driver !== 'vercel-blob') return;
+  try {
+    const { del } = await import('@vercel/blob');
+    await del(list);
+  } catch (error) {
+    console.error('[deletePublic] failed to delete blob file(s)', error);
+  }
+}
+
 export async function uploadPublic(file: { name: string; type: string; data: ArrayBuffer | Buffer }): Promise<UploadResult> {
   if (driver === 'vercel-blob') {
     const { put } = await import('@vercel/blob');

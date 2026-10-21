@@ -9,6 +9,7 @@ import { activity, notify } from './audit';
 import { nextCode, nextPropertyCode, nextListingPublicId, uniqueListingSlug } from './ids';
 import { recomputeMatchesForRequirement, recomputeMatchesForListing } from './matching';
 import { notifyVisitors } from './notify-visitors';
+import { deletePublic } from './storage';
 import * as V from './validators';
 import type { CurrentUser } from './auth';
 
@@ -142,10 +143,24 @@ export const propertyResource: ResourceDef = {
         },
       });
     }
-    // Media is replaced wholesale: the editor sends the full ordered set it wants kept.
+    // Media is replaced wholesale: the editor sends the full ordered set it wants
+    // kept, so anything in the old set whose url isn't in that new set was
+    // actually removed — those files are now orphaned in Blob storage with
+    // nothing left pointing at them, and need deleting there too, not just from
+    // the database. Kept photos re-send their existing url, which is how this
+    // tells "removed" apart from "kept, unchanged".
+    if (media) {
+      const keptUrls = new Set((media as { url: string }[]).map((m) => m.url));
+      const removedUrls = ((existing as { media?: { url: string }[] }).media ?? [])
+        .map((m) => m.url)
+        .filter((url) => !keptUrls.has(url));
+      if (removedUrls.length) await deletePublic(removedUrls);
+    }
     return media ? { ...rest, media: { deleteMany: {}, create: media } } : rest;
   },
-  afterDelete: async () => {
+  afterDelete: async (existing) => {
+    const urls = ((existing as { media?: { url: string }[] }).media ?? []).map((m) => m.url);
+    if (urls.length) await deletePublic(urls);
     refreshPublicPages();
   },
   beforeDelete: async (existing) => {
