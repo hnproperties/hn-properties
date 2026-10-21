@@ -120,8 +120,14 @@ export default async function PropertiesPage({ searchParams }: { searchParams: S
       prisma.property.count({ where: { AND: [scope, { isArchived: false }, { isVerified: true }] } }),
     ]),
     Promise.resolve(OWNER_PROPERTY_TYPES),
+    // Was isActive: true, type: 'AREA', properties: { some: {} } — three filters
+    // that each cut the list down further: excluding localities of the 'LOCALITY'
+    // type (as opposed to 'AREA'), excluding ones still pending approval, and
+    // excluding anywhere with no property in the CRM yet. Staff filtering here
+    // need the full list — including a locality with nothing in it yet, which is
+    // exactly when you'd want to go look.
     prisma.location.findMany({
-      where: { isActive: true, type: 'AREA', properties: { some: {} } },
+      where: { type: { in: ['AREA', 'LOCALITY'] } },
       orderBy: { name: 'asc' },
       select: { slug: true, name: true },
     }),
