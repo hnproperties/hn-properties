@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useRouter, useSearchParams, usePathname } from 'next/navigation';
 import { useState } from 'react';
 import Photo from '../Photo';
+import RadiusMapPicker from './RadiusMapPicker';
 import { inr, area } from '@/lib/format';
 import { label } from '@/lib/constants';
 
@@ -107,7 +108,8 @@ export default function PropertyTable({
     router.refresh();
   }
 
-  const filterKeys = ['category', 'location', 'beds', 'areaMin', 'areaMax', 'priceMin', 'priceMax', 'verified', 'status', 'assigned'];
+  const filterKeys = ['category', 'location', 'beds', 'areaMin', 'areaMax', 'priceMin', 'priceMax', 'verified', 'status', 'assigned', 'radiusKm', 'lat', 'lng'];
+  const [showMapPicker, setShowMapPicker] = useState(false);
   const activeFilters = filterKeys.filter((key) => params.get(key)).length;
   const value = (key: string) => params.get(key) ?? '';
 
@@ -243,6 +245,45 @@ export default function PropertyTable({
           </div>
 
           <div>
+            <label className="label" htmlFor="f-radius">Within</label>
+            <div className="flex gap-2">
+              <select
+                id="f-radius"
+                className="field py-2"
+                value={value('radiusKm')}
+                onChange={(e) => go({ radiusKm: e.target.value })}
+              >
+                <option value="">Exact locality only</option>
+                <option value="1">1 km</option>
+                <option value="2">2 km</option>
+                <option value="3">3 km</option>
+                <option value="5">5 km</option>
+                <option value="10">10 km</option>
+              </select>
+              <button
+                type="button"
+                className={`btn py-2 text-sm whitespace-nowrap ${value('lat') ? 'btn-navy' : 'btn-ghost'}`}
+                onClick={() => setShowMapPicker((v) => !v)}
+                title="Search from a point on the map instead of a locality name"
+              >
+                📍{value('lat') ? ' Pin set' : ' Pin a point'}
+              </button>
+              {value('lat') && (
+                <button type="button" className="btn btn-ghost py-2 text-sm" onClick={() => go({ lat: '', lng: '' })}>
+                  Clear pin
+                </button>
+              )}
+            </div>
+            {/*
+              With a pin set, "radius around the locality" has no locality to be
+              around — the pin itself is the centre instead, same radius options.
+              Without this note it's not obvious why picking a locality above
+              stops doing anything once a pin is dropped here.
+            */}
+            {value('lat') && <p className="mt-1 text-xs text-[var(--muted)]">Searching around the pinned point — Locality above is ignored while a pin is set.</p>}
+          </div>
+
+          <div>
             <label className="label" htmlFor="f-status">Listing status</label>
             <select id="f-status" className="field py-2" value={value('status')} onChange={(e) => go({ status: e.target.value })}>
               <option value="">Any</option>
@@ -328,6 +369,17 @@ export default function PropertyTable({
           <p className="self-end text-xs text-[var(--muted)] lg:col-span-2">
             Price matches a listing price or the owner&apos;s expectation. Area matches built-up, carpet or plot.
           </p>
+        </div>
+      )}
+
+      {showFilters && showMapPicker && (
+        <div className="plate p-4">
+          <RadiusMapPicker
+            lat={value('lat') ? Number(value('lat')) : null}
+            lng={value('lng') ? Number(value('lng')) : null}
+            radiusKm={Number(value('radiusKm') || '2')}
+            onChange={(lat, lng) => go({ lat: String(lat), lng: String(lng), radiusKm: value('radiusKm') || '2' })}
+          />
         </div>
       )}
 
@@ -417,7 +469,14 @@ export default function PropertyTable({
 
                   <td className="px-4 py-3"><span className="mono text-xs">{row.code}</span></td>
                   <td className="px-4 py-3">{row.category?.name ?? '—'}</td>
-                  <td className="px-4 py-3">{row.location?.name ?? '—'}</td>
+                  <td className="px-4 py-3">
+                    {row.location?.name ?? '—'}
+                    {typeof row.distanceKm === 'number' && (
+                      <span className="ml-1.5 whitespace-nowrap text-xs text-[var(--brand)]">
+                        · {row.distanceKm < 1 ? `${Math.round(row.distanceKm * 1000)} m` : `${row.distanceKm.toFixed(1)} km`}
+                      </span>
+                    )}
+                  </td>
                   <td className="px-4 py-3">{size ? area(size, row.areaUnit) : '—'}</td>
                   <td className="px-4 py-3 font-semibold">{price ? inr(price) : '—'}</td>
                   <td className="px-4 py-3">{row.assignedTo?.name ?? '—'}</td>

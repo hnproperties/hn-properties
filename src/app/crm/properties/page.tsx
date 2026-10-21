@@ -21,7 +21,24 @@ type Search = {
   verified?: string;
   status?: string;
   assigned?: string;
+  // Radius search: either an explicit pin (lat/lng) or "radiusKm around the
+  // locality already picked in `location`" — see where these are used below.
+  lat?: string;
+  lng?: string;
+  radiusKm?: string;
 };
+
+/** Straight-line distance between two points in km — plenty accurate at a city
+ * scale, and much simpler than pulling in a real geo library for this. */
+function haversineKm(aLat: number, aLng: number, bLat: number, bLng: number): number {
+  const R = 6371;
+  const dLat = ((bLat - aLat) * Math.PI) / 180;
+  const dLng = ((bLng - aLng) * Math.PI) / 180;
+  const s =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos((aLat * Math.PI) / 180) * Math.cos((bLat * Math.PI) / 180) * Math.sin(dLng / 2) ** 2;
+  return 2 * R * Math.asin(Math.sqrt(s));
+}
 
 /**
  * Inventory list. Rows are clickable through to the full record, and the search box
@@ -61,7 +78,53 @@ export default async function PropertiesPage({ searchParams }: { searchParams: S
 
   const filters: any[] = [];
   if (f.category) filters.push({ category: { slug: f.category } });
-  if (f.location) filters.push({ location: { slug: f.location } });
+
+  /*
+   * Radius search. The origin is either an explicit pin (lat/lng from the map
+   * picker) or — if a locality is picked in the Locality select and a radius is
+   * also chosen — that locality's own stored coordinates. Either way, once a
+   * radius is active it replaces the Locality field's usual exact-match
+   * behaviour; "Gwarighat, within 2km" means properties near Gwarighat, not only
+   * properties whose locality field literally says Gwarighat.
+   *
+   * The where-clause box below is deliberately a loose rectangle, not the circle
+   * itself — Prisma/Postgres compare plain numbers fine, there's no need for a
+   * geo extension for that part. It just needs to comfortably contain the real
+   * circle so nothing genuinely inside the radius gets excluded before the exact
+   * distance check below the query, which is what actually enforces the circle
+   * and what the corner cases (the four triangles between box and circle) get
+   * filtered back out by.
+   */
+  const radiusKm = numeric(f.radiusKm);
+  let origin: { lat: number; lng: number } | null = null;
+  if (radiusKm) {
+    const pinLat = numeric(f.lat);
+    const pinLng = numeric(f.lng);
+    if (pinLat != null && pinLng != null) {
+      origin = { lat: pinLat, lng: pinLng };
+    } else if (f.location) {
+      // findFirst, not findUnique: slug is only unique combined with its parent
+      // locality (parentId_slug), not on its own.
+      const place = await prisma.location.findFirst({ where: { slug: f.location }, select: { latitude: true, longitude: true } });
+      if (place?.latitude != null && place.longitude != null) origin = { lat: Number(place.latitude), lng: Number(place.longitude) };
+    }
+  }
+
+  if (origin) {
+    // ~111km per degree of latitude everywhere; longitude's distance per degree
+    // shrinks with latitude, hence the cos() correction — otherwise the box would
+    // be needlessly wide (near the equator) or too narrow (far from it) for the
+    // actual circle. Jabalpur sits at a latitude where this matters a little.
+    const latDelta = radiusKm! / 111;
+    const lngDelta = radiusKm! / (111 * Math.cos((origin.lat * Math.PI) / 180));
+    filters.push({
+      latitude: { gte: origin.lat - latDelta, lte: origin.lat + latDelta },
+      longitude: { gte: origin.lng - lngDelta, lte: origin.lng + lngDelta },
+    });
+  } else if (f.location) {
+    filters.push({ location: { slug: f.location } });
+  }
+
   if (f.beds) filters.push({ bedrooms: { gte: Number(f.beds) } });
   if (f.verified === 'true') filters.push({ isVerified: true });
   if (f.verified === 'false') filters.push({ isVerified: false });
@@ -136,6 +199,27 @@ export default async function PropertiesPage({ searchParams }: { searchParams: S
 
   const [all, sale, rent, commercial, land, verified] = counts;
 
+  /*
+   * The bounding box above is a loose rectangle, so it can still include the four
+   * corner areas outside the actual circle (nearer the box's corners than its
+   * centre). This is what turns that rectangle into the real circle the person
+   * asked for — exact distance, filtered to the radius, nearest first. A property
+   * with no coordinates on file can't be placed in a circle at all, so it's left
+   * out of a radius search rather than guessed at.
+   */
+  let finalRows = rows;
+  if (origin) {
+    finalRows = rows
+      .map((row: any) => {
+        const rLat = row.latitude != null ? Number(row.latitude) : null;
+        const rLng = row.longitude != null ? Number(row.longitude) : null;
+        const distanceKm = rLat != null && rLng != null ? haversineKm(origin!.lat, origin!.lng, rLat, rLng) : null;
+        return { ...row, distanceKm };
+      })
+      .filter((row: any) => row.distanceKm != null && row.distanceKm <= radiusKm!)
+      .sort((a: any, b: any) => a.distanceKm - b.distanceKm);
+  }
+
   return (
     <div className="space-y-5">
       <header className="flex flex-wrap items-end justify-between gap-4">
@@ -149,7 +233,7 @@ export default async function PropertiesPage({ searchParams }: { searchParams: S
       </header>
 
       <PropertyTable
-        rows={plain(rows) as any[]}
+        rows={plain(finalRows) as any[]}
         tab={tab}
         term={term}
         categories={categories}
