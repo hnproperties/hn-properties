@@ -74,22 +74,43 @@ function PhotoField({ urls, onChange }: { urls: string[]; onChange: (next: strin
     if (!files?.length) return;
     setBusy(true);
     setError(null);
-    const added: string[] = [];
 
-    for (const original of Array.from(files).slice(0, 15)) {
-      try {
-        // Shrink before uploading: camera photos are several megabytes, which is
-        // slow on mobile data and pointless for a listing photograph.
-        const file = await compressImage(original);
-        const body = new FormData();
-        body.append('file', file);
-        const response = await fetch('/api/public/uploads', { method: 'POST', body });
-        const payload = await response.json();
-        if (!response.ok) throw new Error(payload.error ?? 'Upload failed');
-        added.push(payload.data.url);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Upload failed');
-      }
+    /*
+     * Was one file at a time, start to finish, before the next began — compress
+     * photo 1, wait, upload photo 1, wait, only then start photo 2. With several
+     * photos that adds up even on a fast connection, since nothing overlaps: the
+     * second photo's compression (CPU work, not network) was sitting idle the
+     * whole time the first one's upload was in flight, and vice versa.
+     *
+     * Running every file concurrently lets compression and upload overlap across
+     * photos instead of queuing end to end. The rate limit on the upload endpoint
+     * is 20/hour counted per file — the 15-photo cap here stays well under that
+     * even fired all at once, so there's no risk of tripping it by parallelising.
+     *
+     * Promise.allSettled rather than Promise.all: one bad photo (corrupt file,
+     * a single flaky request) shouldn't lose the others — collected into results
+     * below, in original selection order, not completion order, so the gallery
+     * ends up in the order the person picked them.
+     */
+    const results = await Promise.allSettled(
+      Array.from(files)
+        .slice(0, 15)
+        .map(async (original) => {
+          const file = await compressImage(original);
+          const body = new FormData();
+          body.append('file', file);
+          const response = await fetch('/api/public/uploads', { method: 'POST', body });
+          const payload = await response.json();
+          if (!response.ok) throw new Error(payload.error ?? 'Upload failed');
+          return payload.data.url as string;
+        })
+    );
+
+    const added = results.filter((r): r is PromiseFulfilledResult<string> => r.status === 'fulfilled').map((r) => r.value);
+    const failed = results.filter((r): r is PromiseRejectedResult => r.status === 'rejected');
+    if (failed.length) {
+      const first = failed[0].reason instanceof Error ? failed[0].reason.message : 'Upload failed';
+      setError(failed.length === 1 ? first : `${failed.length} photos failed to upload — ${first}`);
     }
 
     if (added.length) onChange([...urls, ...added].slice(0, 15));

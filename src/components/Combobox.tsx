@@ -25,6 +25,13 @@ type Props = {
   allowNew?: boolean;
   /** Wording for that option, e.g. 'Add "Tagore Nagar" as a new locality'. */
   newLabel?: (typed: string) => string;
+  /**
+   * Fires only when an existing option is actually picked from the list — not on
+   * every keystroke, and not for a typed-but-unmatched "add new" value. For a
+   * caller that needs the option's value (a slug, say) rather than just its
+   * display label, which onChange alone never provides.
+   */
+  onSelect?: (option: Option) => void;
 };
 
 /**
@@ -32,7 +39,7 @@ type Props = {
  * became unwieldy past a hundred entries, so this renders its own list: filtered as
  * you type, navigable with the arrow keys, and closed by Escape or a click outside.
  */
-export default function Combobox({ id, options, value, onChange, placeholder, className, required, onEnter, allowNew, newLabel }: Props) {
+export default function Combobox({ id, options, value, onChange, placeholder, className, required, onEnter, allowNew, newLabel, onSelect }: Props) {
   const [open, setOpen] = useState(false);
   const [highlight, setHighlight] = useState(0);
   const wrapper = useRef<HTMLDivElement>(null);
@@ -79,6 +86,7 @@ export default function Combobox({ id, options, value, onChange, placeholder, cl
 
   function choose(option: Option) {
     onChange(option.label);
+    onSelect?.(option);
     setOpen(false);
   }
 

@@ -22,10 +22,15 @@ export default function PhotoUploader({ urls, onChange }: Props) {
     if (!files?.length) return;
     setBusy(true);
     setError(null);
-    const added: string[] = [];
 
-    for (const original of Array.from(files)) {
-      try {
+    // Same fix as the public forms' uploader: every file compresses and uploads
+    // concurrently instead of one finishing start-to-finish before the next
+    // begins, which was serialising CPU work (compression) and network time
+    // (upload) across every photo in the batch rather than letting them overlap.
+    // No rate limit on this authenticated endpoint, so nothing caps how many can
+    // run at once here the way the public form's 20/hour limit does.
+    const results = await Promise.allSettled(
+      Array.from(files).map(async (original) => {
         // Shrink before uploading, exactly as the public forms do. Staff add
         // properties from the same phones owners do, and a 6 MB camera photo
         // over patchy mobile data is the slowest part of adding a property.
@@ -36,10 +41,15 @@ export default function PhotoUploader({ urls, onChange }: Props) {
         const response = await fetch('/api/uploads', { method: 'POST', body });
         const payload = await response.json();
         if (!response.ok) throw new Error(payload.error ?? 'Upload failed');
-        added.push(payload.data.url);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Upload failed');
-      }
+        return payload.data.url as string;
+      })
+    );
+
+    const added = results.filter((r): r is PromiseFulfilledResult<string> => r.status === 'fulfilled').map((r) => r.value);
+    const failed = results.filter((r): r is PromiseRejectedResult => r.status === 'rejected');
+    if (failed.length) {
+      const first = failed[0].reason instanceof Error ? failed[0].reason.message : 'Upload failed';
+      setError(failed.length === 1 ? first : `${failed.length} photos failed to upload — ${first}`);
     }
 
     if (added.length) onChange([...urls, ...added]);

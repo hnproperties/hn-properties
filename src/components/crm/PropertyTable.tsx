@@ -2,9 +2,10 @@
 
 import Link from 'next/link';
 import { useRouter, useSearchParams, usePathname } from 'next/navigation';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Photo from '../Photo';
 import RadiusMapPicker from './RadiusMapPicker';
+import Combobox from '../Combobox';
 import { inr, area } from '@/lib/format';
 import { label } from '@/lib/constants';
 
@@ -112,6 +113,18 @@ export default function PropertyTable({
   const [showMapPicker, setShowMapPicker] = useState(false);
   const activeFilters = filterKeys.filter((key) => params.get(key)).length;
   const value = (key: string) => params.get(key) ?? '';
+
+  // Locality as a typeahead rather than a plain <select> — past a hundred-odd
+  // options a dropdown you have to scroll through is slower than one you can
+  // just type into. Local text state because the box shows a label ("Gwarighat")
+  // while the URL (the actual filter) holds a slug; synced below whenever the
+  // URL's own value changes from somewhere other than this box, e.g. Clear all.
+  const locationSlug = value('location');
+  const [localityText, setLocalityText] = useState(() => locations.find((l) => l.value === locationSlug)?.label ?? '');
+  useEffect(() => {
+    setLocalityText(locations.find((l) => l.value === locationSlug)?.label ?? '');
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [locationSlug]);
 
   /** Sold, rented out, or back on the market — the everyday state changes. */
   async function setStatus(listingId: string, action: string, label: string) {
@@ -238,10 +251,15 @@ export default function PropertyTable({
 
           <div>
             <label className="label" htmlFor="f-location">Locality</label>
-            <select id="f-location" className="field py-2" value={value('location')} onChange={(e) => go({ location: e.target.value })}>
-              <option value="">Anywhere</option>
-              {locations.map((l) => <option key={l.value} value={l.value}>{l.label}</option>)}
-            </select>
+            <Combobox
+              id="f-location"
+              className="field py-2"
+              options={[{ value: '', label: 'Anywhere' }, ...locations]}
+              value={localityText}
+              onChange={setLocalityText}
+              onSelect={(option) => go({ location: option.value })}
+              placeholder="Type to search, or pick Anywhere"
+            />
           </div>
 
           <div>

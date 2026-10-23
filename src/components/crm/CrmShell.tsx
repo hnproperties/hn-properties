@@ -260,8 +260,10 @@ export default function CrmShell({ children }: { children: React.ReactNode }) {
                 if (!items.length) return null;
                 return (
                   <div key={group}>
-                    <p className="px-3 pb-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--muted)]">{group}</p>
-                    <ul className="space-y-0.5">
+                    {/* Bigger on the HN Core app (mobile) only — lg: reverts every size
+                        here back to what the laptop/desktop sidebar already had. */}
+                    <p className="px-3 pb-1 text-xs font-semibold uppercase tracking-[0.12em] text-[var(--muted)] lg:text-[10px]">{group}</p>
+                    <ul className="space-y-1 lg:space-y-0.5">
                       {items.map((item) => {
                         const active = pathname === item.href || (item.href !== '/crm' && pathname.startsWith(item.href));
                         const badge = badgeFor(item.href);
@@ -270,7 +272,7 @@ export default function CrmShell({ children }: { children: React.ReactNode }) {
                           <li key={item.href}>
                             <Link
                               href={item.href}
-                              className={`flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm transition ${
+                              className={`flex items-center gap-2.5 rounded-lg px-3 py-3 text-base transition lg:py-2 lg:text-sm ${
                                 active
                                   ? 'bg-[var(--navy)] font-semibold text-white'
                                   : justChanged
@@ -285,11 +287,11 @@ export default function CrmShell({ children }: { children: React.ReactNode }) {
                                       : 'text-[var(--ink-soft)] hover:bg-[var(--paper)]'
                               }`}
                             >
-                              <span className="text-base">{item.icon}</span>
+                              <span className="text-lg lg:text-base">{item.icon}</span>
                               <span className="flex-1">{item.label}</span>
                               {badge && (
                                 <span
-                                  className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${
+                                  className={`rounded-full px-2 py-0.5 text-xs font-semibold lg:text-[11px] ${
                                     active
                                       ? 'bg-white text-[var(--navy)]'
                                       : badge.tone === 'alert'

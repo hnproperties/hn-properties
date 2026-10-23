@@ -27,7 +27,13 @@ const MAX_EDGE = 1600;
 /** Bounds for the quality search. The top is short of 1.0: JPEG at 1.0 spends a lot of bytes on nothing anyone can see. */
 const QUALITY_MIN = 0.35;
 const QUALITY_MAX = 0.95;
-const SEARCH_STEPS = 7; // halving the range seven times is finer than the eye can follow
+// Was 7. Each step is a full JPEG re-encode of the image — the slowest part of
+// compressing a single photo, and the main reason uploading several of them felt
+// slow. Halving the 0.35–0.95 quality range 4 times narrows it to about 0.04,
+// already well past where two quality levels look different to the eye; the
+// three steps this trims off were spending real time sharpening a distinction
+// nobody could see.
+const SEARCH_STEPS = 4;
 
 function loadImage(file: File): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
