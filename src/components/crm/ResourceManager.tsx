@@ -5,6 +5,7 @@ import SearchableSelect from './SearchableSelect';
 import MultiSearchSelect from './MultiSearchSelect';
 import InlineClient from './InlineClient';
 import { useCan } from './CrmShell';
+import { site } from '@/lib/constants';
 import { inr, shortDate, dateTime, toDateInput, toLocalInput } from '@/lib/format';
 import { label as labelOf } from '@/lib/constants';
 
@@ -74,9 +75,14 @@ function renderCell(row: any, column: Column) {
     case 'property':
       // Opens the public page for that reference in a new tab. stopPropagation
       // keeps the click from also opening this row's edit form.
+      //
+      // Must be absolute, not /property/${value} — the CRM runs on its own
+      // subdomain (crm.hnproperties.co.in), and the property page only exists on
+      // the main site. A relative link resolves against whatever domain the
+      // click happened on, which from inside the CRM meant 404 every time.
       return (
         <a
-          href={`/property/${value}`}
+          href={`${site.url}/property/${value}`}
           target="_blank"
           rel="noopener noreferrer"
           onClick={(e) => e.stopPropagation()}

@@ -64,7 +64,26 @@ type Props = {
 };
 
 /** Photo picker for public forms. Uploads go to the rate-limited public endpoint. */
-function PhotoField({ urls, onChange }: { urls: string[]; onChange: (next: string[]) => void }) {
+function PhotoField({
+  urls,
+  onChange,
+  onUploadingChange,
+}: {
+  urls: string[];
+  onChange: (next: string[]) => void;
+  /**
+   * Reports "am I mid-upload" up to the parent form, which outlives this field —
+   * on a phone, moving to the next step unmounts this component entirely (see the
+   * note on `stepping` below), which used to mean the only record that an upload
+   * was still in flight disappeared with it. The upload itself kept running in
+   * the background and did eventually save correctly, but someone who reached
+   * Submit before it finished would send the property without those photos —
+   * which is "the photos don't get uploaded" from where they're sitting, even
+   * though each one individually did reach storage. The parent uses this to hold
+   * Next/Submit until every upload this field started has actually finished.
+   */
+  onUploadingChange?: (uploading: boolean) => void;
+}) {
   const input = useRef<HTMLInputElement>(null);
   const cameraInput = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
@@ -73,6 +92,7 @@ function PhotoField({ urls, onChange }: { urls: string[]; onChange: (next: strin
   async function upload(files: FileList | null) {
     if (!files?.length) return;
     setBusy(true);
+    onUploadingChange?.(true);
     setError(null);
 
     /*
@@ -115,6 +135,7 @@ function PhotoField({ urls, onChange }: { urls: string[]; onChange: (next: strin
 
     if (added.length) onChange([...urls, ...added].slice(0, 15));
     setBusy(false);
+    onUploadingChange?.(false);
     if (input.current) input.current.value = '';
   }
 
@@ -206,6 +227,12 @@ export default function PublicForm({ endpoint, fields, hidden, submitLabel, succ
   const [reviewing, setReviewing] = useState(false);
   const reviewRef = useRef<HTMLDivElement>(null);
   const [step, setStep] = useState(0);
+  // How many PhotoFields currently have an upload in flight — see the note on
+  // PhotoField's onUploadingChange prop for why this lives up here rather than
+  // in the field itself. A count, not a boolean: this form only has one photos
+  // field today, but a count holds up correctly if that ever changes, where a
+  // boolean written by two fields could get clobbered by whichever finishes last.
+  const [uploadingPhotos, setUploadingPhotos] = useState(0);
 
   /*
    * Whether we are actually on a phone, in JavaScript rather than CSS.
@@ -243,6 +270,17 @@ export default function PublicForm({ endpoint, fields, hidden, submitLabel, succ
 
   async function submit(event: React.FormEvent) {
     event.preventDefault();
+
+    /*
+     * Covers both Next (mid-wizard) and the real Submit with one guard, since
+     * both run through this same function — see the long note on PhotoField's
+     * onUploadingChange prop for why this has to be checked here rather than
+     * left to the photos step itself to sort out.
+     */
+    if (uploadingPhotos > 0) {
+      setError('Photos are still uploading — please wait a few seconds and try again.');
+      return;
+    }
 
     /*
      * First press opens the review, second one sends.
@@ -381,7 +419,11 @@ export default function PublicForm({ endpoint, fields, hidden, submitLabel, succ
             localities={fields.find((f) => f.type === 'combobox')?.options ?? []}
           />
         ) : field.type === 'photos' ? (
-          <PhotoField urls={values[field.name] ?? []} onChange={set_} />
+          <PhotoField
+            urls={values[field.name] ?? []}
+            onChange={set_}
+            onUploadingChange={(uploading) => setUploadingPhotos((n) => Math.max(0, n + (uploading ? 1 : -1)))}
+          />
         ) : field.type === 'textarea' ? (
           <textarea
             id={`f-${field.name}`}
