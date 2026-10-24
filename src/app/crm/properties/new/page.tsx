@@ -1,7 +1,7 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { Suspense, useEffect, useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import {
   toOptions, AREA_UNITS, FACINGS, FURNISHINGS, MOTIVATIONS, SOURCE_TYPES,
   AMENITY_OPTIONS, BUSINESS_SUITABILITY, LISTING_TYPES, VISIBILITIES,
@@ -65,11 +65,37 @@ function Field({ label, children, half }: { label: string; children: React.React
  * Draft-saveable: step 1 already writes the property, so nothing is lost if the
  * browser closes halfway through.
  */
-export default function PropertyWizard() {
+/*
+ * useSearchParams() (added for ?edit=<id>) requires a Suspense boundary around
+ * whatever calls it, or Next.js can't statically prerender this page at build
+ * time — it needs to know what to show before the search params are available.
+ * The actual wizard moved to PropertyWizard below; this is just the wrapper.
+ */
+export default function PropertyWizardPage() {
+  return (
+    <Suspense fallback={<div className="wrap py-16 text-center"><p className="text-[var(--muted)]">Loading…</p></div>}>
+      <PropertyWizard />
+    </Suspense>
+  );
+}
+
+function PropertyWizard() {
   const router = useRouter();
   const can = useCan();
+  const searchParams = useSearchParams();
+  /*
+   * ?edit=<propertyId> turns this same wizard into an editor for an existing
+   * property, rather than building a second form that would have to duplicate
+   * every one of the category-aware fields below. saveProperty() and
+   * saveListing() already PATCH instead of POST whenever propertyId/listingId
+   * state is already set — nothing about saving itself needed to change, only
+   * getting that state populated from the existing record before the person
+   * sees the form, instead of starting from the usual blank slate.
+   */
+  const editId = searchParams.get('edit');
+  const [editLoading, setEditLoading] = useState(!!editId);
 
-  const [step, setStep] = useState(0);
+  const [step, setStep] = useState<number>(editId ? S.BASICS : S.PURPOSE);
   const [lookups, setLookups] = useState<Record<string, Option[]>>({});
   const [form, setForm] = useState<Record<string, any>>({ areaUnit: 'SQFT', motivation: 'NORMAL', sourceType: 'DIRECT_OWNER' });
   const [listing, setListing] = useState<Record<string, any>>({ listingType: 'SALE', visibility: 'PRIVATE', isNegotiable: true });
@@ -132,6 +158,49 @@ export default function PropertyWizard() {
         .catch(() => undefined);
     }
   }, []);
+
+  useEffect(() => {
+    if (!editId) return;
+    let cancelled = false;
+    fetch(`/api/properties/${editId}`)
+      .then((r) => r.json())
+      .then((payload) => {
+        if (cancelled) return;
+        const property = payload.data;
+        if (!property) throw new Error('Property not found');
+
+        // The fetched row carries its relations too (category, location, owner,
+        // media, listings) alongside the plain scalar fields this form actually
+        // reads from `form.<name>` — spreading the whole thing in is harmless,
+        // the relation objects just sit unused next to the ids the fields want.
+        setForm((current) => ({ ...current, ...property }));
+        setPhotos((property.media ?? []).map((m: { url: string }) => m.url));
+        setPropertyId(property.id);
+
+        /*
+         * Only the first listing loads into the editable Financials/Visibility
+         * fields below — a property with both a sale and a rent listing (the
+         * wizard does allow that) only has one `listing` state to hold, same as
+         * it only ever creates one at a time. Editing the other one still works
+         * fine from the Listings tab directly; this just doesn't surface both
+         * here at once.
+         */
+        const primary = property.listings?.[0];
+        if (primary) {
+          setListing((current) => ({ ...current, ...primary }));
+          setListingId(primary.id);
+          setPublicId(primary.publicId);
+        }
+      })
+      .catch((err) => setError(err instanceof Error ? err.message : 'Could not load that property'))
+      .finally(() => {
+        if (!cancelled) setEditLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [editId]);
 
   /** Duplicate check before the property is written, per the brief. */
   async function checkDuplicates() {
@@ -240,7 +309,7 @@ export default function PropertyWizard() {
 
   async function next() {
     try {
-      if (step === S.BASICS) await checkDuplicates();
+      if (step === S.BASICS && !editId) await checkDuplicates();
       if (step === S.FINANCIALS) await saveProperty();
       if (step === S.DOCUMENTS && propertyId) await saveDocuments(propertyId);
       setStep((s) => Math.min(STEPS.length - 1, s + 1));
@@ -296,6 +365,15 @@ export default function PropertyWizard() {
     furnishing: applies(FIELD_TYPES.furnishing),
     hotel: applies(FIELD_TYPES.hotelRooms) && !!ownerType,
   };
+
+  if (editLoading) {
+    return (
+      <div className="wrap py-16 text-center">
+        <p className="text-[var(--muted)]">{error ?? 'Loading property…'}</p>
+      </div>
+    );
+  }
+
   return (
     <div>
       <header>
@@ -754,7 +832,9 @@ export default function PropertyWizard() {
                 {can('property.publish') && (
                   <>
                     <button type="button" className="btn btn-brass" disabled={busy} onClick={() => finish('COMING_SOON')}>Save as coming soon</button>
-                    <button type="button" className="btn btn-primary" disabled={busy} onClick={() => finish('PUBLISHED')}>Publish now</button>
+                    <button type="button" className="btn btn-primary" disabled={busy} onClick={() => finish('PUBLISHED')}>
+                      {editId && listing.status === 'PUBLISHED' ? 'Save changes' : 'Publish now'}
+                    </button>
                   </>
                 )}
               </div>
@@ -780,7 +860,7 @@ export default function PropertyWizard() {
         {error && <p className="mt-4 text-sm text-[var(--danger)]">{error}</p>}
 
         <div className="mt-6 flex items-center justify-between border-t pt-4">
-          <button type="button" className="btn btn-ghost" disabled={step === S.PURPOSE} onClick={() => setStep((s) => s - 1)}>Back</button>
+          <button type="button" className="btn btn-ghost" disabled={step === (editId ? S.BASICS : S.PURPOSE)} onClick={() => setStep((s) => s - 1)}>Back</button>
           <p className="mono text-xs text-[var(--muted)]">Step {step + 1} of {STEPS.length}</p>
           {step < STEPS.length - 1 ? (
             <button type="button" className="btn btn-primary" disabled={busy} onClick={next}>

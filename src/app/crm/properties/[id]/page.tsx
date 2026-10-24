@@ -63,6 +63,7 @@ export default async function PropertyDetailPage({ params }: { params: { id: str
         </div>
         <div className="flex gap-2">
           <Link href="/crm/properties" className="btn btn-ghost">All properties</Link>
+          <Link href={`/crm/properties/new?edit=${property.id}`} className="btn btn-navy">Edit property</Link>
           <Link href="/crm/listings" className="btn btn-primary">Manage listings</Link>
         </div>
       </header>
@@ -88,7 +89,10 @@ export default async function PropertyDetailPage({ params }: { params: { id: str
               </p>
               {listing.status === 'PUBLISHED' && (
                 <div className="mt-3 flex flex-wrap gap-2">
-                  <Link href={`/property/${listing.publicId}`} className="btn btn-ghost py-1.5 text-xs">View public page</Link>
+                  {/* Plain <a>, not <Link> — this crosses from the CRM subdomain to the
+                      main site, a different origin Next's client router can't (and
+                      shouldn't) handle, same reasoning as the fix in ResourceManager. */}
+                  <a href={`${site.url}/property/${listing.publicId}`} target="_blank" rel="noopener noreferrer" className="btn btn-ghost py-1.5 text-xs">View public page</a>
                   <a
                     className="btn btn-ghost py-1.5 text-xs"
                     href={waLink(site.whatsapp, whatsappListingMessage({ ...listing, property } as any))}
