@@ -103,6 +103,36 @@ body {
     border-radius: 14px;
     box-shadow: var(--shadow-card);
   }
+  /*
+   * The CRM-wide frosted-glass treatment — translucent white over a blur,
+   * instead of .plate's flat opaque white, so cards read as sitting above the
+   * page rather than just being a different-coloured rectangle on it. Needs a
+   * tinted (not flat white) page background to actually show through — see
+   * .crm-backdrop below, which every page this is used on sits inside.
+   */
+  .glass-plate {
+    background: rgba(255, 255, 255, 0.6);
+    border: 1px solid rgba(255, 255, 255, 0.8);
+    border-radius: 16px;
+    box-shadow: 0 8px 24px -8px rgba(16, 35, 60, 0.18), inset 0 1px 0 rgba(255, 255, 255, 0.7);
+    backdrop-filter: blur(16px) saturate(150%);
+    -webkit-backdrop-filter: blur(16px) saturate(150%);
+  }
+  /* Same family, used for the slide-out edit drawers — a touch more opaque
+     since a form needs to stay easy to read while something is being typed. */
+  .glass-panel {
+    background: rgba(255, 255, 255, 0.82);
+    border-left: 1px solid rgba(255, 255, 255, 0.8);
+    box-shadow: -8px 0 32px -8px rgba(16, 35, 60, 0.25);
+    backdrop-filter: blur(20px) saturate(150%);
+    -webkit-backdrop-filter: blur(20px) saturate(150%);
+  }
+  /* The soft tinted backdrop glass cards above sit on — CrmShell's <main>. Flat
+     white behind frosted glass barely reads as glass at all; this gives the
+     blur something gently colourful to pick up. */
+  .crm-backdrop {
+    background: linear-gradient(180deg, #eaf3fb 0%, #f3f6fb 40%, #f6f3fb 100%);
+  }
 
   /* Panels that sit on white. Same treatment as .plate, slightly rounder. */
   .glass-card {

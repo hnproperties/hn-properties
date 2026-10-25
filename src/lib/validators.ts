@@ -54,6 +54,7 @@ export const userSchema = z.object({
   roleId: z.string().min(1),
   consultantId: str(60).optional(),
   isActive: bool.optional(),
+  avatarUrl: str(500).optional(),
 });
 
 export const locationSchema = z.object({

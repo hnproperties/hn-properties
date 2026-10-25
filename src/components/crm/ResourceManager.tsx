@@ -346,7 +346,7 @@ export default function ResourceManager({
         <p className="mt-4 rounded-lg border border-[var(--danger)] bg-[#fdeaea] p-3 text-sm text-[var(--danger)]">{bulkMessage}</p>
       )}
 
-      <div className="plate mt-4 overflow-x-auto">
+      <div className="glass-plate mt-4 overflow-x-auto">
         <table className="w-full min-w-[640px] text-sm">
           <thead>
             <tr className="border-b">
@@ -437,10 +437,10 @@ export default function ResourceManager({
       {editing && (
         <div className="fixed inset-0 z-50 flex justify-end bg-black/30" onClick={() => setEditing(null)}>
           <div
-            className="h-full w-full max-w-xl overflow-y-auto bg-[var(--plate)] shadow-xl"
+            className="glass-panel h-full w-full max-w-xl overflow-y-auto"
             onClick={(event) => event.stopPropagation()}
           >
-            <div className="sticky top-0 flex items-center justify-between border-b bg-[var(--plate)] px-6 py-4">
+            <div className="sticky top-0 flex items-center justify-between border-b border-white/60 bg-white/70 px-6 py-4 backdrop-blur-md">
               <h2 className="display text-lg">
                 {editing.id ? `Edit ${title.toLowerCase().replace(/s$/, '')}` : `New ${title.toLowerCase().replace(/s$/, '')}`}
               </h2>

@@ -399,7 +399,7 @@ export default function CrmShell({ children }: { children: React.ReactNode }) {
             </div>
           </header>
 
-          <main className="p-4 lg:p-6">{children}</main>
+          <main className="crm-backdrop min-h-[calc(100vh-68px)] p-4 lg:p-6">{children}</main>
 
           {/* Polls for changes and refreshes the page in place. */}
           <LivePulse onCounts={onCounts} />

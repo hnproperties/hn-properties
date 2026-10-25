@@ -10,7 +10,7 @@ import { audit } from '@/lib/audit';
 
 const SAFE = {
   id: true, code: true, name: true, email: true, phone: true, isActive: true,
-  lastLoginAt: true, createdAt: true,
+  lastLoginAt: true, createdAt: true, avatarUrl: true,
   role: { select: { id: true, key: true, name: true, rank: true } },
   consultant: { select: { id: true, firmName: true, status: true } },
 } as const;
@@ -67,6 +67,7 @@ export const POST = route(async (req: NextRequest) => {
       roleId: input.roleId,
       consultantId,
       isActive: input.isActive ?? true,
+      avatarUrl: input.avatarUrl,
     },
     select: SAFE,
   });

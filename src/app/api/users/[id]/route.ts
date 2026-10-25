@@ -9,7 +9,7 @@ import { audit } from '@/lib/audit';
 
 const SAFE = {
   id: true, code: true, name: true, email: true, phone: true, isActive: true,
-  lastLoginAt: true, createdAt: true,
+  lastLoginAt: true, createdAt: true, avatarUrl: true,
   role: { select: { id: true, key: true, name: true, rank: true } },
   consultant: { select: { id: true, firmName: true, status: true } },
 } as const;
@@ -77,6 +77,7 @@ export const PATCH = route(async (req: NextRequest, { params }: { params: { id: 
       roleId: input.roleId,
       consultantId,
       isActive: input.isActive,
+      avatarUrl: input.avatarUrl,
       ...(input.password ? { passwordHash: await hashPassword(input.password) } : {}),
       // Any change to role, access or password invalidates existing sessions immediately.
       ...(input.roleId || input.password || input.isActive === false ? { sessionEpoch: { increment: 1 } } : {}),

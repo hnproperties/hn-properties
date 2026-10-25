@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { dateTime } from '@/lib/format';
 import { useCrmUser } from '@/components/crm/CrmShell';
+import { compressImage } from '@/lib/compress-image';
 
 type Role = { id: string; key: string; name: string; rank: number; permissions: { permissionId: string }[]; _count: { users: number } };
 type Permission = { id: string; key: string; group: string; label: string; isDanger: boolean };
@@ -21,6 +22,27 @@ export default function TeamPage() {
   const [selected, setSelected] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);
   const [firms, setFirms] = useState<{ value: string; label: string }[]>([]);
+  const [avatarBusy, setAvatarBusy] = useState(false);
+
+  async function uploadAvatar(file: File | undefined) {
+    if (!file) return;
+    setAvatarBusy(true);
+    setError(null);
+    try {
+      const compressed = await compressImage(file);
+      const body = new FormData();
+      body.append('file', compressed);
+      body.append('kind', 'photo');
+      const response = await fetch('/api/uploads', { method: 'POST', body });
+      const payload = await response.json();
+      if (!response.ok) throw new Error(payload.error ?? 'Upload failed');
+      setForm((current) => ({ ...current, avatarUrl: payload.data.url }));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Upload failed');
+    } finally {
+      setAvatarBusy(false);
+    }
+  }
 
   const load = useCallback(async () => {
     const [usersResponse, rolesResponse, firmsResponse] = await Promise.all([
@@ -165,10 +187,10 @@ export default function TeamPage() {
         </button>
       </header>
 
-      {notice && <p className="plate p-3 text-sm">{notice}</p>}
+      {notice && <p className="glass-plate p-3 text-sm">{notice}</p>}
 
       {selected.length > 0 && (
-        <div className="plate flex flex-wrap items-center gap-2 p-3">
+        <div className="glass-plate flex flex-wrap items-center gap-2 p-3">
           <span className="text-sm font-medium">{selected.length} selected</span>
           <button type="button" className="btn btn-ghost py-2 text-sm" disabled={busy} onClick={deactivateSelected}>
             Deactivate
@@ -187,7 +209,7 @@ export default function TeamPage() {
         </div>
       )}
 
-      <div className="plate overflow-x-auto">
+      <div className="glass-plate overflow-x-auto">
         <table className="w-full min-w-[700px] text-sm">
           <thead>
             <tr className="border-b">
@@ -229,8 +251,20 @@ export default function TeamPage() {
                 </td>
                 <td className="px-4 py-2"><span className="mono text-xs">{user.code}</span></td>
                 <td className="px-4 py-2">
-                  {user.name}
-                  {user.id === me?.id && <span className="badge ml-2">you</span>}
+                  <div className="flex items-center gap-2">
+                    {user.avatarUrl ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={user.avatarUrl} alt="" className="h-8 w-8 rounded-full border border-[var(--rule)] object-cover" />
+                    ) : (
+                      <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[var(--brand-soft)] text-xs font-semibold text-[var(--brand)]">
+                        {user.name?.[0]?.toUpperCase() ?? '?'}
+                      </div>
+                    )}
+                    <span>
+                      {user.name}
+                      {user.id === me?.id && <span className="badge ml-2">you</span>}
+                    </span>
+                  </div>
                 </td>
                 <td className="px-4 py-2 text-[var(--muted)]">{user.email}</td>
                 <td className="px-4 py-2">
@@ -278,7 +312,7 @@ export default function TeamPage() {
 
         <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {roles.map((role) => (
-            <div key={role.id} className="plate p-4">
+            <div key={role.id} className="glass-plate p-4">
               <div className="flex items-baseline justify-between">
                 <p className="font-medium">{role.name}</p>
                 <span className="mono text-xs text-[var(--muted)]">{role._count.users} people</span>
@@ -304,9 +338,43 @@ export default function TeamPage() {
       {/* User drawer */}
       {editing && (
         <div className="fixed inset-0 z-50 flex justify-end bg-black/30" onClick={() => setEditing(null)}>
-          <div className="h-full w-full max-w-md overflow-y-auto bg-[var(--plate)] p-6" onClick={(e) => e.stopPropagation()}>
+          <div className="glass-panel h-full w-full max-w-md overflow-y-auto p-6" onClick={(e) => e.stopPropagation()}>
             <h2 className="display text-lg">{editing.id ? 'Edit person' : 'Add person'}</h2>
             <form onSubmit={saveUser} className="mt-4 space-y-4">
+              <div>
+                <label className="label">Photo</label>
+                <div className="flex items-center gap-3">
+                  {form.avatarUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={form.avatarUrl} alt="" className="h-16 w-16 rounded-full border border-[var(--rule)] object-cover" />
+                  ) : (
+                    <div className="flex h-16 w-16 items-center justify-center rounded-full border border-dashed border-[var(--rule)] text-xs text-[var(--muted)]">
+                      No photo
+                    </div>
+                  )}
+                  <div className="flex flex-col gap-1">
+                    <label className="btn btn-ghost cursor-pointer py-1.5 text-xs">
+                      {avatarBusy ? 'Uploading…' : form.avatarUrl ? 'Change photo' : 'Add photo'}
+                      <input
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        disabled={avatarBusy}
+                        onChange={(e) => uploadAvatar(e.target.files?.[0])}
+                      />
+                    </label>
+                    {form.avatarUrl && (
+                      <button
+                        type="button"
+                        className="text-left text-xs text-[var(--danger)]"
+                        onClick={() => setForm((current) => ({ ...current, avatarUrl: '' }))}
+                      >
+                        Remove photo
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
               <div><label className="label" htmlFor="u-name">Name</label>
                 <input id="u-name" className="field" value={form.name ?? ''} onChange={(e) => setForm({ ...form, name: e.target.value })} required /></div>
               <div><label className="label" htmlFor="u-email">Email</label>
@@ -359,7 +427,7 @@ export default function TeamPage() {
       {/* Role drawer */}
       {roleEditing && (
         <div className="fixed inset-0 z-50 flex justify-end bg-black/30" onClick={() => setRoleEditing(null)}>
-          <div className="h-full w-full max-w-xl overflow-y-auto bg-[var(--plate)] p-6" onClick={(e) => e.stopPropagation()}>
+          <div className="glass-panel h-full w-full max-w-xl overflow-y-auto p-6" onClick={(e) => e.stopPropagation()}>
             <h2 className="display text-lg">{roleEditing.name} permissions</h2>
             <div className="mt-4 space-y-5">
               {Object.entries(grouped).map(([group, items]) => (
