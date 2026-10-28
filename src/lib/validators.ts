@@ -270,6 +270,7 @@ export const siteVisitSchema = z.object({
   interest: enumOf(C.INTEREST_LEVELS).optional(),
   followUpAt: date.optional(),
   notes: text.optional(),
+  reminderRequested: bool.optional(),
 });
 
 export const dealSchema = z.object({
@@ -335,6 +336,7 @@ export const followUpSchema = z.object({
   listingId: str(60).optional(),
   assignedToId: str(60).optional(),
   isDone: bool.optional(),
+  reminderRequested: bool.optional(),
 });
 
 export const consultantSchema = z.object({

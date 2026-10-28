@@ -295,12 +295,17 @@ export default function PublicForm({ endpoint, fields, hidden, submitLabel, succ
      * rather than moving on and failing later.
      */
     if (stepping && !onLastStep) {
+      // Was missing — the "still uploading" message from the guard above would
+      // stay on screen through every later step, even once it was no longer
+      // true, since nothing on this path ever told it to go away.
+      setError(null);
       setStep(current + 1);
       window.scrollTo({ top: 0, behavior: 'smooth' });
       return;
     }
 
     if (reviewBeforeSend && !reviewing) {
+      setError(null);
       setReviewing(true);
       /*
        * Scroll to the summary, not the top of the page.

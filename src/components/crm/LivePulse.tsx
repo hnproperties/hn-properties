@@ -8,6 +8,7 @@ import { play } from '@/lib/sound';
 export type Counts = {
   pendingReview: number;
   newLeads: number;
+  newRequirements: number;
   dueFollowUps: number;
   overdueFollowUps: number;
   visitsToday: number;

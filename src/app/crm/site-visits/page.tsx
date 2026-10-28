@@ -46,6 +46,9 @@ export default function SiteVisitsPage() {
               at={row.scheduledAt}
               phone={row.agent?.phone}
               details={row.notes ?? undefined}
+              recordId={row.id}
+              endpoint="/api/site-visits"
+              initialReminderSet={row.reminderRequested}
               message={
                 `Site visit reminder\n\n${property}\nWith ${who}\nAt ${when}.` +
                 (row.notes ? `\n\nNote: ${row.notes}` : '') +

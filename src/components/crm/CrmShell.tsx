@@ -182,6 +182,7 @@ export default function CrmShell({ children }: { children: React.ReactNode }) {
     const risen: Record<string, boolean> = {};
     if (next.pendingReview > before.pendingReview) risen['/crm/review'] = true;
     if (next.newLeads > before.newLeads) risen['/crm/leads'] = true;
+    if (next.newRequirements > before.newRequirements) risen['/crm/requirements'] = true;
     if (next.dueFollowUps + next.overdueFollowUps > before.dueFollowUps + before.overdueFollowUps) risen['/crm/follow-ups'] = true;
     if (next.visitsToday > before.visitsToday) risen['/crm/site-visits'] = true;
 
@@ -196,6 +197,7 @@ export default function CrmShell({ children }: { children: React.ReactNode }) {
     if (!counts) return null;
     if (href === '/crm/review' && counts.pendingReview > 0) return { count: counts.pendingReview, tone: 'alert' };
     if (href === '/crm/leads' && counts.newLeads > 0) return { count: counts.newLeads, tone: 'alert' };
+    if (href === '/crm/requirements' && counts.newRequirements > 0) return { count: counts.newRequirements, tone: 'alert' };
     if (href === '/crm/follow-ups') {
       const total = counts.dueFollowUps + counts.overdueFollowUps;
       if (total > 0) return { count: total, tone: counts.overdueFollowUps > 0 ? 'alert' : 'warn' };

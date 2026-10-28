@@ -1,5 +1,7 @@
 'use client';
 
+import { useState } from 'react';
+
 /**
  * Two one-click actions for anything with a time and an assignee.
  *
@@ -7,10 +9,16 @@
  * on its own, since no unattended system should message staff on your behalf.
  * You review it and hit send.
  *
- * "Add reminder" downloads a calendar event. Worth being clear: a website cannot
- * set an alarm on a phone or laptop — there is no browser API for it. A calendar
- * file is the closest equivalent that actually works: opening it puts the event
- * in the phone's calendar or Outlook, which then rings at the right time.
+ * "Add reminder" does two things now, not one. It still downloads a calendar
+ * event — a website genuinely cannot set a phone alarm directly, there is no
+ * browser API for that, and a calendar file remains the one guaranteed way to
+ * get something to ring through the OS's own alarm/calendar app. But it also
+ * flags the record (reminderRequested) so the push-based reminder actually
+ * fires near the real time: an external scheduler calls /api/cron/reminders
+ * every few minutes, which sends a real push notification — sound, vibration,
+ * stays on screen with a Dismiss button — to whoever it's assigned to, once
+ * due. The calendar file alone never did that on its own; nothing was reading
+ * it or acting on it, it only worked if a phone's own calendar app rang it.
  */
 
 function pad(value: number) {
@@ -112,13 +120,41 @@ export default function ScheduleActions({
   phone,
   message,
   details,
+  recordId,
+  endpoint,
+  initialReminderSet,
 }: {
   title: string;
   at?: string | Date | null;
   phone?: string | null;
   message: string;
   details?: string;
+  /** The record's own id and its API base path (e.g. '/api/follow-ups') —
+   * both are needed to flag reminderRequested on it. Omit either and this
+   * falls back to the calendar-file-only behaviour from before. */
+  recordId?: string;
+  endpoint?: string;
+  initialReminderSet?: boolean;
 }) {
+  const [reminderSet, setReminderSet] = useState(!!initialReminderSet);
+  const [busy, setBusy] = useState(false);
+
+  async function addReminder() {
+    if (at) downloadReminder({ title, at, details });
+    if (!recordId || !endpoint) return;
+    setBusy(true);
+    try {
+      const response = await fetch(`${endpoint}/${recordId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ reminderRequested: true }),
+      });
+      if (response.ok) setReminderSet(true);
+    } finally {
+      setBusy(false);
+    }
+  }
+
   return (
     <div className="flex flex-wrap gap-2">
       <button type="button" className="btn btn-ghost" onClick={() => openWhatsApp({ phone, message })}>
@@ -128,10 +164,15 @@ export default function ScheduleActions({
         <button
           type="button"
           className="btn btn-ghost"
-          title="Downloads a calendar event that alerts you 30 minutes before"
-          onClick={() => downloadReminder({ title, at, details })}
+          disabled={busy}
+          title={
+            reminderSet
+              ? 'A push notification will alert you when this is due'
+              : 'Downloads a calendar event, and sends you a push notification when this is due'
+          }
+          onClick={addReminder}
         >
-          ⏰ Add reminder
+          {reminderSet ? '✅ Reminder set' : '⏰ Add reminder'}
         </button>
       )}
     </div>

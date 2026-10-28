@@ -650,6 +650,12 @@ model Requirement {
   assignedToId String?
   assignedTo   User?   @relation("RequirementAssignee", fields: [assignedToId], references: [id])
 
+  /// Set the first time staff open the Requirements screen after this one
+  /// arrives — null means "new", same pattern as Lead.viewedAt. Drives the
+  /// sidebar badge and desk highlight for a requirement submitted from the
+  /// public "Submit Requirement" form, which previously had no highlight at all.
+  viewedAt DateTime?
+
   // A requirement can be published as a public "wanted" notice. The client is never
   // named — only what they are looking for, so owners can come forward.
   isPublic     Boolean  @default(false)
@@ -810,7 +816,15 @@ model FollowUp {
   assignedTo   User?   @relation("FollowUpOwner", fields: [assignedToId], references: [id])
   createdAt    DateTime @default(now())
 
+  /// Set when "Add reminder" is clicked, alongside the .ics download — an
+  /// external scheduler (cron-job.org) calls /api/cron/reminders every few
+  /// minutes, which pushes to assignedTo once dueAt arrives and stamps
+  /// remindedAt so the same reminder never fires twice.
+  reminderRequested Boolean   @default(false)
+  remindedAt        DateTime?
+
   @@index([dueAt, isDone])
+  @@index([reminderRequested, remindedAt])
   @@index([assignedToId, dueAt])
 }
 
@@ -854,8 +868,13 @@ model SiteVisit {
   createdAt      DateTime       @default(now())
   updatedAt      DateTime       @updatedAt
 
+  /// Same reminder mechanism as FollowUp.reminderRequested — see the note there.
+  reminderRequested Boolean   @default(false)
+  remindedAt        DateTime?
+
   @@index([scheduledAt, status])
   @@index([agentId])
+  @@index([reminderRequested, remindedAt])
 }
 
 enum OfferBy {

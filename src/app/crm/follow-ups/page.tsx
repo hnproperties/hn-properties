@@ -54,6 +54,9 @@ export default function FollowUpsPage() {
               at={row.dueAt}
               phone={row.assignedTo?.phone}
               details={row.note ?? undefined}
+              recordId={row.id}
+              endpoint="/api/follow-ups"
+              initialReminderSet={row.reminderRequested}
               message={
                 `Follow-up reminder\n\nPlease call ${who} by ${when}.` +
                 (property ? `\n\nProperty: ${property}` : '') +

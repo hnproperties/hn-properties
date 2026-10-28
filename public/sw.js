@@ -149,6 +149,7 @@ self.addEventListener('push', (event) => {
   }
 
   const title = payload.title || 'HN Properties';
+  const isReminder = payload.kind === 'REMINDER';
   const options = {
     body: payload.body || '',
     icon: NOTIFICATION_ICON,
@@ -158,6 +159,23 @@ self.addEventListener('push', (event) => {
     tag: payload.tag || undefined,
     renotify: Boolean(payload.tag),
     data: { href: payload.href || '/', kind: payload.kind || null },
+    // silent defaults to false, but set it explicitly rather than relying on
+    // that — vibrate gives Android something to alert with even on a device
+    // with sound off. The pattern is short buzz, pause, short buzz, not a
+    // single long one, which reads more like "something happened" than a
+    // stuck button.
+    silent: false,
+    vibrate: [200, 100, 200],
+    /*
+     * A reminder (the Add Reminder alarm) stays on screen until it's actually
+     * dismissed, with a real Dismiss button in the notification itself —
+     * everything else still auto-clears after a few seconds like a normal
+     * alert, which is the right behaviour for "new lead arrived" but wrong
+     * for "you asked to be reminded of this," where disappearing on its own
+     * defeats the point.
+     */
+    requireInteraction: isReminder,
+    actions: isReminder ? [{ action: 'dismiss', title: 'Dismiss' }, { action: 'open', title: 'View' }] : undefined,
   };
 
   event.waitUntil(self.registration.showNotification(title, options));
@@ -165,6 +183,11 @@ self.addEventListener('push', (event) => {
 
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
+
+  // Dismiss just closes it — the whole point of the button is doing that
+  // without also pulling the app to the foreground, unlike tapping the
+  // notification body itself (or the "View" action) which still opens it.
+  if (event.action === 'dismiss') return;
 
   const href = (event.notification.data && event.notification.data.href) || '/';
   const target = new URL(href, self.location.origin).href;

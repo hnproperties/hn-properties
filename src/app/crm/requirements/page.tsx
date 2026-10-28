@@ -1,6 +1,8 @@
 'use client';
 
 import Link from 'next/link';
+import { useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import ResourceManager from '@/components/crm/ResourceManager';
 import { toOptions, REQUIREMENT_STATUSES, LISTING_TYPES, AREA_UNITS, FACINGS } from '@/lib/constants';
 
@@ -19,6 +21,22 @@ const anyCategory = (form: Record<string, any>, lookups: Record<string, any[]>, 
 };
 
 export default function RequirementsPage() {
+  const router = useRouter();
+
+  // Same reasoning as the identical effect on the Leads page: opening this
+  // screen counts as having seen whatever's new, clearing the sidebar badge
+  // immediately rather than waiting for the next poll. A requirement submitted
+  // from the public "Submit Requirement" form had no highlight anywhere in the
+  // CRM before this existed.
+  useEffect(() => {
+    fetch('/api/requirements/mark-viewed', { method: 'POST' })
+      .then(() => {
+        router.refresh();
+        window.dispatchEvent(new Event('crm:recount'));
+      })
+      .catch(() => undefined);
+  }, [router]);
+
   return (
     <div className="space-y-4">
       <ResourceManager

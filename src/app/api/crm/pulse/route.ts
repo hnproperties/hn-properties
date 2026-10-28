@@ -18,11 +18,15 @@ export const GET = route(async () => {
   const leadScope = seesAll('lead') ? {} : { assignedToId: user.id };
 
   const visitScope = seesAll('visit') ? {} : { agentId: user.id };
+  // Same OR-based scoping as /api/requirements/[id]/matches — assigned to the
+  // requirement directly, or to the client it belongs to.
+  const requirementScope = seesAll('requirement') ? {} : { OR: [{ assignedToId: user.id }, { client: { assignedToId: user.id } }] };
   const soon = new Date(now.getTime() + 60 * 60 * 1000); // the next hour
 
   const [
     pendingReview,
     newLeads,
+    newRequirements,
     dueFollowUps,
     overdueFollowUps,
     visitsToday,
@@ -32,6 +36,7 @@ export const GET = route(async () => {
   ] = await Promise.all([
     prisma.listing.count({ where: { status: { in: ['SUBMITTED', 'UNDER_VERIFICATION'] } } }),
     prisma.lead.count({ where: { ...leadScope, viewedAt: null } }),
+    prisma.requirement.count({ where: { ...requirementScope, viewedAt: null } }),
     prisma.followUp.count({
       where: { ...leadScope, isDone: false, dueAt: { gte: startOfDay, lt: new Date(startOfDay.getTime() + 86_400_000) } },
     }),
@@ -61,6 +66,7 @@ export const GET = route(async () => {
   return ok({
     pendingReview,
     newLeads,
+    newRequirements,
     dueFollowUps,
     overdueFollowUps,
     visitsToday,

@@ -105,6 +105,17 @@ async function deliverAndPrune(subs: SubRow[], payload: PushPayload): Promise<vo
         .sendNotification(
           { endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } },
           body,
+          /*
+           * Without urgency, Android's push service is free to treat this as
+           * low-priority and batch or delay it — especially once the device is
+           * in Doze/battery-saver, which is most of the time a phone sits idle.
+           * That is almost certainly why pushes were arriving late or not
+           * visibly "popping up": they were being delivered, just not promptly.
+           * 'high' asks for immediate wake-and-deliver. TTL is how long the
+           * push service keeps retrying if the device is briefly offline —
+           * a day is plenty for a CRM alert that's still useful by then.
+           */
+          { urgency: 'high', TTL: 60 * 60 * 24 },
         )
         .then(() => ({ id: sub.id, ok: true as const }))
         .catch((err: unknown) => ({ id: sub.id, ok: false as const, err })),
