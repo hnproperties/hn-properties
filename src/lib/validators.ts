@@ -271,6 +271,8 @@ export const siteVisitSchema = z.object({
   followUpAt: date.optional(),
   notes: text.optional(),
   reminderRequested: bool.optional(),
+  reminderAt: date.optional(),
+  reminderNote: str(500).optional(),
 });
 
 export const dealSchema = z.object({
@@ -337,6 +339,8 @@ export const followUpSchema = z.object({
   assignedToId: str(60).optional(),
   isDone: bool.optional(),
   reminderRequested: bool.optional(),
+  reminderAt: date.optional(),
+  reminderNote: str(500).optional(),
 });
 
 export const consultantSchema = z.object({

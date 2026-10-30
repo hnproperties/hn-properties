@@ -25,14 +25,18 @@ export async function GET(req: NextRequest) {
   const now = new Date();
   let sent = 0;
 
+  // Fires on reminderAt — the time chosen in the "Add reminder" form — not on
+  // dueAt/scheduledAt. Those stay what they always were (when the follow-up or
+  // visit itself is due); the reminder is deliberately a separate, often
+  // earlier, moment someone picked on purpose.
   const dueFollowUps = await prisma.followUp.findMany({
-    where: { reminderRequested: true, remindedAt: null, dueAt: { lte: now }, assignedToId: { not: null } },
-    select: { id: true, note: true, assignedToId: true, leadId: true },
+    where: { reminderRequested: true, remindedAt: null, reminderAt: { lte: now }, assignedToId: { not: null } },
+    select: { id: true, note: true, reminderNote: true, assignedToId: true, leadId: true },
   });
   for (const f of dueFollowUps) {
     await sendPushToUsers([f.assignedToId!], {
-      title: '⏰ Reminder: follow-up due',
-      body: f.note || 'A follow-up you set a reminder for is due now.',
+      title: '⏰ Reminder: follow-up',
+      body: f.reminderNote || f.note || 'A follow-up you set a reminder for.',
       href: '/crm/follow-ups',
       tag: `followup-${f.id}`,
       kind: 'REMINDER',
@@ -42,13 +46,13 @@ export async function GET(req: NextRequest) {
   }
 
   const dueVisits = await prisma.siteVisit.findMany({
-    where: { reminderRequested: true, remindedAt: null, scheduledAt: { lte: now }, agentId: { not: null } },
-    select: { id: true, code: true, agentId: true },
+    where: { reminderRequested: true, remindedAt: null, reminderAt: { lte: now }, agentId: { not: null } },
+    select: { id: true, code: true, reminderNote: true, agentId: true },
   });
   for (const v of dueVisits) {
     await sendPushToUsers([v.agentId!], {
-      title: '⏰ Reminder: site visit due',
-      body: `Site visit ${v.code} is due now.`,
+      title: '⏰ Reminder: site visit',
+      body: v.reminderNote || `Site visit ${v.code}.`,
       href: '/crm/site-visits',
       tag: `visit-${v.id}`,
       kind: 'REMINDER',

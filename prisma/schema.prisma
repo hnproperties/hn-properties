@@ -816,11 +816,15 @@ model FollowUp {
   assignedTo   User?   @relation("FollowUpOwner", fields: [assignedToId], references: [id])
   createdAt    DateTime @default(now())
 
-  /// Set when "Add reminder" is clicked, alongside the .ics download — an
-  /// external scheduler (cron-job.org) calls /api/cron/reminders every few
-  /// minutes, which pushes to assignedTo once dueAt arrives and stamps
+  /// Set from the "Add reminder" form — a time and note chosen separately from
+  /// dueAt itself, since the point of a reminder is often "nudge me before
+  /// it's actually due," not just re-announce the due time. An external
+  /// scheduler (cron-job.org) calls /api/cron/reminders every few minutes,
+  /// which pushes to assignedTo once reminderAt arrives and stamps
   /// remindedAt so the same reminder never fires twice.
   reminderRequested Boolean   @default(false)
+  reminderAt        DateTime?
+  reminderNote      String?
   remindedAt        DateTime?
 
   @@index([dueAt, isDone])
@@ -868,8 +872,11 @@ model SiteVisit {
   createdAt      DateTime       @default(now())
   updatedAt      DateTime       @updatedAt
 
-  /// Same reminder mechanism as FollowUp.reminderRequested — see the note there.
+  /// Same reminder mechanism as FollowUp.reminderRequested/reminderAt/reminderNote
+  /// — see the notes there.
   reminderRequested Boolean   @default(false)
+  reminderAt        DateTime?
+  reminderNote      String?
   remindedAt        DateTime?
 
   @@index([scheduledAt, status])
