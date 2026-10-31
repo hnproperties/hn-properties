@@ -199,37 +199,48 @@ export default function ScheduleActions({
       </div>
 
       {open && (
-        <div className="glass-plate absolute left-0 top-full z-20 mt-2 w-72 space-y-3 p-4" onClick={(e) => e.stopPropagation()}>
-          <p className="text-sm font-semibold text-[var(--navy)]">{title}</p>
-          <div className="flex gap-2">
-            <div className="flex-1">
-              <label className="label text-xs" htmlFor="rem-date">Date</label>
-              <input id="rem-date" type="date" className="field py-1.5 text-sm" value={date} onChange={(e) => setDate(e.target.value)} />
+        /*
+         * A fixed, full-screen overlay rather than a dropdown anchored to the
+         * button — this button usually sits inside a horizontally-scrolling
+         * table (overflow-x-auto on the wrapper), and setting overflow-x to
+         * anything but visible makes the browser clip overflow-y too, which
+         * silently hid an absolutely-positioned dropdown here. Fixed
+         * positioning escapes that entirely, the same way the resource edit
+         * drawers elsewhere in the CRM already do.
+         */
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4" onClick={() => setOpen(false)}>
+          <div className="glass-plate w-full max-w-sm space-y-3 p-4" onClick={(e) => e.stopPropagation()}>
+            <p className="text-sm font-semibold text-[var(--navy)]">{title}</p>
+            <div className="flex gap-2">
+              <div className="flex-1">
+                <label className="label text-xs" htmlFor="rem-date">Date</label>
+                <input id="rem-date" type="date" className="field py-1.5 text-sm" value={date} onChange={(e) => setDate(e.target.value)} />
+              </div>
+              <div className="flex-1">
+                <label className="label text-xs" htmlFor="rem-time">Time</label>
+                <input id="rem-time" type="time" className="field py-1.5 text-sm" value={time} onChange={(e) => setTime(e.target.value)} />
+              </div>
             </div>
-            <div className="flex-1">
-              <label className="label text-xs" htmlFor="rem-time">Time</label>
-              <input id="rem-time" type="time" className="field py-1.5 text-sm" value={time} onChange={(e) => setTime(e.target.value)} />
+            <div>
+              <label className="label text-xs" htmlFor="rem-note">Note</label>
+              <textarea
+                id="rem-note"
+                className="field py-1.5 text-sm"
+                rows={2}
+                placeholder="What should the reminder say?"
+                value={note}
+                onChange={(e) => setNote(e.target.value)}
+              />
             </div>
-          </div>
-          <div>
-            <label className="label text-xs" htmlFor="rem-note">Note</label>
-            <textarea
-              id="rem-note"
-              className="field py-1.5 text-sm"
-              rows={2}
-              placeholder="What should the reminder say?"
-              value={note}
-              onChange={(e) => setNote(e.target.value)}
-            />
-          </div>
-          {error && <p className="text-xs text-[var(--danger)]">{error}</p>}
-          <div className="flex gap-2">
-            <button type="button" className="btn btn-primary flex-1 py-1.5 text-sm" disabled={busy} onClick={saveReminder}>
-              {busy ? 'Saving…' : 'Set reminder'}
-            </button>
-            <button type="button" className="btn btn-ghost py-1.5 text-sm" onClick={() => setOpen(false)}>
-              Cancel
-            </button>
+            {error && <p className="text-xs text-[var(--danger)]">{error}</p>}
+            <div className="flex gap-2">
+              <button type="button" className="btn btn-primary flex-1 py-1.5 text-sm" disabled={busy} onClick={saveReminder}>
+                {busy ? 'Saving…' : 'Set reminder'}
+              </button>
+              <button type="button" className="btn btn-ghost py-1.5 text-sm" onClick={() => setOpen(false)}>
+                Cancel
+              </button>
+            </div>
           </div>
         </div>
       )}
